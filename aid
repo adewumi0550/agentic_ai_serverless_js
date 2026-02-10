@@ -278,15 +278,17 @@ cmd_analyze() {
     code_context=$(scan_codebase)
     
     # 3. Build Prompt
-    prompt="You are a Principal DevOps Engineer and Software Architect. I need an 'Agentic Deployment Integration' report for this workspace.\n\n"
+    prompt="You are a Principal DevOps Engineer and Software Architect. I need a DEEP DIVE 'Agentic Deployment Integration' report for this workspace.\n\n"
     prompt="${prompt}Infrastructure Context:${infra_context}\n\n"
     prompt="${prompt}Codebase Context:\n${code_context}\n\n"
-    prompt="${prompt}Please provide a comprehensive report covering:\n"
-    prompt="${prompt}1. **Project Stack Analysis**: Identify the language, framework, and key dependencies.\n"
-    prompt="${prompt}2. **Infrastructure Assessment**: Evaluate the existing Docker/Terraform/config files. Are they sufficient? What is missing?\n"
-    prompt="${prompt}3. **Flow & Architecture Advice**: Recommend the best CI/CD flow and cloud architecture for this specific stack.\n"
-    prompt="${prompt}4. **Security & Performance**: Highlight immediate red flags or optimization opportunities.\n"
-    prompt="${prompt}5. **Next Steps**: A prioritized list of actionable items to get this production-ready.\n\n"
+    prompt="${prompt}Proivde a comprehensive, actionable report. Do not be generic.\n"
+    prompt="${prompt}1. **Executive Summary**: What is this project? (Derive from code).\n"
+    prompt="${prompt}2. **Stack Analysis**: Language, framework, dependencies, and version compatibility checks.\n"
+    prompt="${prompt}3. **Architecture Review**: Evaluate the structure. Is it Monolithic? Microservices? Serverless? logic-heavy? data-heavy?\n"
+    prompt="${prompt}4. **Infrastructure & Deployment**: specific advice on Dockerfile, CI/CD pipelines (GitHub Actions/GitLab CI), and Cloud providers (AWS vs GCP vs Vercel) best suited for THIS stack.\n"
+    prompt="${prompt}5. **Security Audit**: Potential vulnerabilities (hardcoded keys, injection risks, old deps).\n"
+    prompt="${prompt}6. **Agentic Optimization**: How can AI agents (like yourself) better assist with this repo?\n"
+    prompt="${prompt}7. **Action Plan**: Detailed step-by-step roadmap to go to production.\n\n"
     prompt="${prompt}Format the output as a clean, professional Markdown report."
 
     echo "🧠 Generating Agentic Report..."
@@ -302,15 +304,19 @@ cmd_docs() {
 }
 
 cmd_report() {
-    if [ -f "AGENTIC_REPORT.md" ]; then
-        echo "📄 Displaying Agentic Report..."
-        echo "--------------------------------------------------"
-        cat "AGENTIC_REPORT.md"
-        echo "--------------------------------------------------"
-    else
-        echo "❌ No report found."
-        echo "   Run './aid analyze' first to generate one."
+    if [ ! -f "AGENTIC_REPORT.md" ]; then
+        echo "⚠️  No report found. Generating one now..."
+        cmd_analyze
     fi
+    
+    echo "📄 Displaying Agentic Report..."
+    echo "--------------------------------------------------"
+    if command -v mdcat >/dev/null 2>&1; then
+        mdcat "AGENTIC_REPORT.md"
+    else
+        cat "AGENTIC_REPORT.md"
+    fi
+    echo "--------------------------------------------------"
 }
 
 cmd_generate() {
