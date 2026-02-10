@@ -412,6 +412,7 @@ cmd_help() {
     echo "Serverless & Ops:"
     echo "  start       Start local server (auto-detects project type)"
     echo "  deploy      Deploy project (runs deploy.sh, sls deploy, etc.)"
+    echo "  push        Smart Git Push (Auto-stage, AI Commit Message, Push)"
     echo ""
 }
 
@@ -430,5 +431,6 @@ case "$1" in
     report)     cmd_report ;;
     start)      cmd_start ;;
     deploy)     cmd_deploy ;;
+    push)       cmd_push ;;
     *)          cmd_help ;;
 esac
