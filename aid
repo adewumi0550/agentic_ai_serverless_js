@@ -34,6 +34,23 @@ cmd_version() {
 
 cmd_update() {
     echo "🔄 Checking for updates..."
+    
+    # 1. Fetch latest version number from GitHub
+    latest_version=$(curl -s "https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/aid" | grep '^AID_VERSION=' | cut -d'=' -f2 | tr -d '"')
+    
+    if [ -z "$latest_version" ]; then
+        echo "⚠️  Could not fetch latest version info."
+        # Fallback to force update if check fails? Or just ask user.
+        read -p "Force update? [y/N] " force
+        if [[ ! "$force" =~ ^[Yy]$ ]]; then exit 0; fi
+    else
+        if [ "$latest_version" == "$AID_VERSION" ]; then
+            echo "✅ You are already on the latest version ($AID_VERSION)."
+            exit 0
+        fi
+        echo "🚀 New version available: $latest_version (Current: $AID_VERSION)"
+    fi
+
     echo "   Fetching latest installer from GitHub..."
     if curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash; then
         echo ""
