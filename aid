@@ -8,6 +8,7 @@ set -e
 
 CONFIG_FILE=".env"
 GEMINI_MODEL="gemini-1.5-flash"
+AID_VERSION="1.0.1"
 
 # --- Queries and Helpers ---
 
@@ -24,6 +25,12 @@ parse_gemini_response() {
 # --- Commands ---
 
 # --- Commands ---
+
+# --- Commands ---
+
+cmd_version() {
+    echo "aid version $AID_VERSION"
+}
 
 # 1. Configuration
 cmd_config() {
@@ -390,6 +397,7 @@ cmd_help() {
     echo "Core:"
     echo "  init        Setup API Key"
     echo "  config      View or update configuration (e.g., ./aid config GEMINI_MODEL gemini-1.5-pro)"
+    echo "  version     Show version info"
     echo "  help        Show this list"
     echo ""
     echo "Agentic AI:"
@@ -412,6 +420,7 @@ cmd_help() {
 case "$1" in
     init)       cmd_init ;;
     config)     cmd_config "$2" "$3" ;;
+    version|-v|--version) cmd_version ;;
     ask)        cmd_ask "$2" ;;
     review)     cmd_review ;;
     refactor)   cmd_refactor "$2" "$3" ;;
