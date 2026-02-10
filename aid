@@ -301,6 +301,29 @@ cmd_docs() {
     call_gemini "$prompt" "PROJECT_DOCS.md"
 }
 
+cmd_report() {
+    if [ -f "AGENTIC_REPORT.md" ]; then
+        echo "📄 Displaying Agentic Report..."
+        echo "--------------------------------------------------"
+        cat "AGENTIC_REPORT.md"
+        echo "--------------------------------------------------"
+    else
+        echo "❌ No report found."
+        echo "   Run './aid analyze' first to generate one."
+    fi
+}
+
+cmd_generate() {
+    check_config
+    if [ -z "$1" ]; then
+        echo "❌ Usage: ./aid gen \"Describe the code you want to generate\""
+        exit 1
+    fi
+    echo "👨‍💻 Generating code..."
+    prompt="You are an expert software engineer. Generate high-quality, production-ready code for the following request. Return ONLY the code/markdown.\n\nRequest: $1"
+    call_gemini "$prompt" "generated_code.md"
+}
+
 # 3. Core & Serverless
 
 cmd_start() {
