@@ -295,6 +295,11 @@ cmd_analyze() {
     # 2. Gather File Context
     code_context=$(scan_codebase)
     
+    # Save context for user reference
+    mkdir -p "aid_reports"
+    echo "$code_context" > "aid_reports/project_context.txt"
+    echo "📄 Project context saved to aid_reports/project_context.txt"
+    
     # 3. User Rules
     user_rules=""
     if [ -f ".aid/rules.md" ]; then
@@ -324,7 +329,8 @@ cmd_analyze() {
     prompt="${prompt}Format the output as a clean, professional Markdown report."
 
     echo "🧠 Generating Agentic Report..."
-    call_gemini "$prompt" "AGENTIC_REPORT.md"
+    call_gemini "$prompt" "aid_reports/deployment_plan.md"
+    cp "aid_reports/deployment_plan.md" "AGENTIC_REPORT.md" # Keep legacy link for now
     log_history "analyze"
 }
 
@@ -576,8 +582,14 @@ load_config() {
 }
 
 check_config() {
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo "❌ Run './aid init' first."
+    config_found=0
+    if [ -f "$CONFIG_FILE" ]; then config_found=1; fi
+    if [ -f ".aid/app.key" ]; then config_found=1; fi
+    if [ -f "$HOME/.aid/config" ]; then config_found=1; fi
+
+    if [ "$config_found" -eq 0 ]; then
+        echo "❌ No configuration found. Run './aid init' first."
+        echo "   (Checked .env, .aid/app.key, and ~/.aid/config)"
         exit 1
     fi
     
