@@ -99,16 +99,7 @@ cmd_init() {
     mkdir -p ".aid"
     
     # Secure: Add to .gitignore if not present
-    if [ ! -f ".gitignore" ]; then
-        echo ".aid/" > .gitignore
-        echo "✅ Created .gitignore and added .aid/"
-    else
-        if ! grep -q "^\.aid/" ".gitignore"; then
-            echo "" >> .gitignore
-            echo ".aid/" >> .gitignore
-            echo "✅ Added .aid/ to .gitignore (Secured)"
-        fi
-    fi
+    ensure_gitignore
 
     # Check if global config exists and load it
     if [ -f "$GLOBAL_CONFIG_FILE" ]; then
