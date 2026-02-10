@@ -7,7 +7,7 @@
 set -e
 
 CONFIG_FILE=".env"
-GEMINI_MODEL="gemini-1.5-flash"
+GEMINI_MODEL="gemini-1.5-flash-latest"
 AID_VERSION="1.0.1"
 
 # Colors
@@ -708,7 +708,22 @@ call_gemini() {
 
     if echo "$response" | grep -q "\"error\":"; then
         echo "❌ API Error"
-        echo "$response"
+        # Check for 404 (Model Not Found)
+        if echo "$response" | grep -q '"code": 404'; then
+             echo "ℹ️  The model '$GEMINI_MODEL' was not found or is not supported."
+             echo "🔍 Fetching available models for your key..."
+             models_response=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY")
+             if echo "$models_response" | grep -q "\"models\":"; then
+                 echo "✅ Available Models:"
+                 echo "$models_response" | python3 -c "import sys, json; print('\n'.join([m['name'].replace('models/', '') for m in json.load(sys.stdin)['models']]))"
+                 echo ""
+                 echo "👉 To use one of these, run: ./aid config GEMINI_MODEL <model_name>"
+             else
+                 echo "❌ Could not list models."
+             fi
+        else
+            echo "$response"
+        fi
         exit 1
     fi
 
