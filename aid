@@ -90,6 +90,42 @@ cmd_config() {
     fi
 }
 
+# Helper to ensure .gitignore has essential entries
+ensure_gitignore() {
+    TOUCHED=0
+    if [ ! -f ".gitignore" ]; then
+        touch .gitignore
+        echo -e "${GREEN}✅ Created .gitignore${NC}"
+        TOUCHED=1
+    fi
+
+    # List of patterns to enforce
+    IGNORES=(
+        "node_modules/"
+        "dist/"
+        "build/"
+        ".env"
+        ".DS_Store"
+        ".aid/"
+        "aid_reports/"
+        "yarn-cache/"
+        "coverage/"
+        "*.log"
+    )
+
+    for pattern in "${IGNORES[@]}"; do
+        if ! grep -qF "$pattern" ".gitignore"; then
+            echo "$pattern" >> .gitignore
+            echo -e "   ${YELLOW}+ Added $pattern to .gitignore${NC}"
+            TOUCHED=1
+        fi
+    done
+
+    if [ "$TOUCHED" -eq 1 ]; then
+        echo -e "${GREEN}🔒 Secured project workspace.${NC}"
+    fi
+}
+
 cmd_init() {
     echo "👋 Welcome to Agentic Deployment Integration"
     
@@ -479,6 +515,9 @@ cmd_deploy() {
 
 cmd_push() {
     check_config
+    
+    # Ensure ignores before adding
+    ensure_gitignore
 
     if [ ! -d ".git" ]; then
         echo "❌ Not a git repository."
