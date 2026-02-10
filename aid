@@ -733,7 +733,9 @@ cmd_help() {
     echo "  config      View or update configuration (e.g., ./aid config GEMINI_MODEL gemini-1.5-pro)"
     echo "  version     Show version info"
     echo "  update      Update aid to the latest version"
+    echo "  update      Update aid to the latest version"
     echo "  history     View command history"
+    echo "  clean       Clear the terminal screen"
     echo "  help        Show this list"
     echo ""
     echo "Agentic AI:"
@@ -749,7 +751,7 @@ cmd_help() {
     echo "  start       Start local server (auto-detects project type)"
     echo "  deploy      Deploy project (runs deploy.sh, sls deploy, etc.)"
     echo "  push        Smart Git Push (Auto-stage, AI Commit Message, Push)"
-    echo "  clean       Clear the terminal screen"
+    echo "  push        Smart Git Push (Auto-stage, AI Commit Message, Push)"
     echo ""
 }
 

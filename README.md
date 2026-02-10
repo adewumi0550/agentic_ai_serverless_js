@@ -9,31 +9,34 @@
 
 ## 🚀 Features
 
-### 🧠 Agentic AI
-*   **`aid ask "question"`**: Chat with your codebase. Ask about architecture, bugs, or logic.
-*   **`aid analyse`**: Generates a deep-dive **Agentic Report** (`AGENTIC_REPORT.md`) covering stack analysis, security audit, and scalability.
-*   **`aid review`**: Performs a comprehensive code review focusing on security and performance.
-*   **`aid refactor file.js "instruction"`**: AI-driven code refactoring.
-*   **`aid gen "instruction"`**: Generate production-ready code snippets.
-*   **`aid docs`**: Auto-generate comprehensive project documentation (`PROJECT_DOCS.md`).
+### Core
+*   **`init`**: Safe setup. Configures API keys and secures your workspace (adds `.env`, `node_modules` to `.gitignore` automatically).
+*   **`config`**: View or update your local/global configuration.
+*   **`version`**: Show current version.
+*   **`update`**: Self-update to the latest version features.
+*   **`history`**: View a log of your AI interactions.
+*   **`clean`**: Instantly clear your terminal screen for a fresh start.
+*   **`help`**: Show the command list.
 
-### 🛠️ Ops & Git Automation
-*   **`aid deploy`**: The star of the show.
-    *   **Auto-Detects** your project type (Node.js, Python, Go, Flutter, etc.).
+### Agentic AI
+*   **`ask "question"`**: Chat with your codebase. Ask about architecture, bugs, or logic.
+*   **`analyse`**: Generates a deep-dive **Agentic Report** (`AGENTIC_REPORT.md`) covering stack analysis, security audit, and scalability.
+*   **`review`**: Performs a comprehensive code review focusing on security and performance.
+*   **`refactor file.js "instruction"`**: AI-driven code refactoring for specific files.
+*   **`gen "instruction"`**: Generate production-ready code snippets from scratch.
+*   **`docs`**: Auto-generate comprehensive project documentation (`PROJECT_DOCS.md`).
+*   **`report`**: View the last generated analysis report.
+
+### Serverless & Ops
+*   **`start`**: Auto-detects your project type (Node, Python, Go, etc.) and starts the local server.
+*   **`deploy`**: The star of the show.
+    *   **Auto-Detects** your project type.
     *   **Generates** a tailored `DEPLOYMENT_PLAN.md` (Dockerfiles, yaml configs, commands).
     *   **Executes** deployment scripts for AWS, GCP, Vercel, Render, and more.
-*   **`aid push`**: Smart Git Push.
+*   **`push`**: Smart Git Push.
     *   **Auto-Stages** changes (respecting `.gitignore`).
     *   **Generates** Semantic Commit Messages (Conventional Commits) based on your diff.
     *   **Pushes** to remote with a single confirmation.
-*   **`aid clean`**: Instantly clears your terminal workspace.
-
-### ⚙️ Developer Experience
-*   **`aid init`**: One-step setup.
-    *   Securely stores API keys in `~/.aid/config` (Global) or `.aid/config` (Local).
-    *   Auto-configures `.gitignore` to prevent secret leakage.
-*   **`aid update`**: Self-updating command to keep you on the bleeding edge.
-*   **`aid history`**: View a log of your AI interactions.
 
 ---
 
@@ -85,14 +88,6 @@ aid deploy
 2.  **Generates**: `DEPLOYMENT_PLAN.md` with step-by-step instructions and IaC code.
 3.  **Executes**: Runs the deployment commands for you.
 
-### 5. Utilities
-```bash
-aid update      # Update to latest version
-aid clean       # Clear screen
-aid history     # View past commands
-aid version     # Show version
-```
-
 ---
 
 ## 🛡️ Security
@@ -103,6 +98,6 @@ aid version     # Show version
 
 ---
 
-## � License
+## 📜 License
 
 MIT License. Open Source and Free to use.
