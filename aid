@@ -86,12 +86,12 @@ cmd_config() {
         # Set value
         if grep -q "^$1=" "$CONFIG_FILE"; then
             # Replace existing (BSD sed compliant)
-            sed -i '' "s/^$1=.*/$1=$2/" "$CONFIG_FILE"
+            sed -i '' "s/^$1=.*/$1=\"$2\"/" "$CONFIG_FILE"
         else
             # Append new
-            echo "$1=$2" >> "$CONFIG_FILE"
+            echo "$1=\"$2\"" >> "$CONFIG_FILE"
         fi
-        echo "✅ Set $1=$2"
+        echo "✅ Set $1=\"$2\""
     fi
 }
 
@@ -100,7 +100,10 @@ cmd_init() {
     
     # 1. Setup Gemini Key
     if [ -f "$CONFIG_FILE" ]; then
-        source "$CONFIG_FILE"
+        # Use set -a to export variables automatically, but don't fail on errors
+        set -a
+        source "$CONFIG_FILE" || echo "⚠️  Warning: specific lines in .env could not be sourced."
+        set +a
     fi
 
     if [ -z "$GEMINI_API_KEY" ]; then
@@ -126,9 +129,9 @@ cmd_init() {
             fi
         done
 
-        echo "GEMINI_API_KEY=$api_key" >> "$CONFIG_FILE"
-        echo "GEMINI_MODEL=$GEMINI_MODEL" >> "$CONFIG_FILE"
-        export GEMINI_API_KEY=$api_key
+        echo "GEMINI_API_KEY=\"$api_key\"" >> "$CONFIG_FILE"
+        echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$CONFIG_FILE"
+        export GEMINI_API_KEY="$api_key"
         
         echo ""
         echo "✅ Setup Complete! Welcome to:"
@@ -173,32 +176,32 @@ cmd_init() {
             read -p "AWS Access Key ID: " aws_key
             read -sp "AWS Secret Access Key: " aws_secret
             echo ""
-            echo "AWS_ACCESS_KEY_ID=$aws_key" >> "$CONFIG_FILE"
-            echo "AWS_SECRET_ACCESS_KEY=$aws_secret" >> "$CONFIG_FILE"
+            echo "AWS_ACCESS_KEY_ID=\"$aws_key\"" >> "$CONFIG_FILE"
+            echo "AWS_SECRET_ACCESS_KEY=\"$aws_secret\"" >> "$CONFIG_FILE"
             ;;
         2)
             platform="GCP"
             read -p "GCP Project ID: " gcp_project
-            echo "GCP_PROJECT_ID=$gcp_project" >> "$CONFIG_FILE"
+            echo "GCP_PROJECT_ID=\"$gcp_project\"" >> "$CONFIG_FILE"
             echo "ℹ️  Note: Ensure you have 'gcloud' installed and authenticated."
             ;;
         3)
             platform="Vercel"
             read -sp "Vercel Token: " vercel_token
             echo ""
-            echo "VERCEL_TOKEN=$vercel_token" >> "$CONFIG_FILE"
+            echo "VERCEL_TOKEN=\"$vercel_token\"" >> "$CONFIG_FILE"
             ;;
         4)
             platform="Render"
             read -sp "Render API Key: " render_key
             echo ""
-            echo "RENDER_API_KEY=$render_key" >> "$CONFIG_FILE"
+            echo "RENDER_API_KEY=\"$render_key\"" >> "$CONFIG_FILE"
             ;;
         5)
             platform="DigitalOcean"
             read -sp "DO Personal Access Token: " do_token
             echo ""
-            echo "DIGITALOCEAN_TOKEN=$do_token" >> "$CONFIG_FILE"
+            echo "DIGITALOCEAN_TOKEN=\"$do_token\"" >> "$CONFIG_FILE"
             ;;
         *)
             platform="Generic"
@@ -206,7 +209,7 @@ cmd_init() {
     esac
 
     echo "✅ Configuration saved to $CONFIG_FILE"
-    echo "DEPLOYMENT_PLATFORM=$platform" >> "$CONFIG_FILE"
+    echo "DEPLOYMENT_PLATFORM=\"$platform\"" >> "$CONFIG_FILE"
 
     # 4. Generate Deployment Plan
     echo "🧠 Generating deployment plan for $platform ($stack)..."
