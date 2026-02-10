@@ -10,55 +10,50 @@ CONFIG_FILE=".env"
 GEMINI_MODEL="gemini-1.5-flash"
 AID_VERSION="1.0.1"
 
-# --- Queries and Helpers ---
-
-# Helper to escape JSON string using Python
-escape_json() {
-    python3 -c "import json, sys; print(json.dumps(sys.stdin.read()))"
-}
-
-# Helper to extract text from Gemini Response using Python
-parse_gemini_response() {
-    python3 -c "import sys, json; print(json.load(sys.stdin)['candidates'][0]['content']['parts'][0]['text'])"
-}
-
-# --- Commands ---
-
-# --- Commands ---
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
 
 # --- Commands ---
 
 cmd_version() {
-    echo "aid version $AID_VERSION"
+    echo -e "${BOLD}🤖 Agentic Deployment Integration${NC} ${BLUE}v$AID_VERSION${NC}"
+    # Optional: System info
+    # echo -e "   ${GREEN}•${NC} System: $(uname -s)"
 }
 
 cmd_update() {
-    echo "🔄 Checking for updates..."
+    echo -e "${CYAN}🔄 Checking for updates...${NC}"
     
     # 1. Fetch latest version number from GitHub
     latest_version=$(curl -s "https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/aid" | grep '^AID_VERSION=' | cut -d'=' -f2 | tr -d '"')
     
     if [ -z "$latest_version" ]; then
-        echo "⚠️  Could not fetch latest version info."
+        echo -e "${YELLOW}⚠️  Could not fetch latest version info.${NC}"
         # Fallback to force update if check fails? Or just ask user.
         read -p "Force update? [y/N] " force
         if [[ ! "$force" =~ ^[Yy]$ ]]; then exit 0; fi
     else
         if [ "$latest_version" == "$AID_VERSION" ]; then
-            echo "✅ You are already on the latest version ($AID_VERSION)."
+            echo -e "${GREEN}✅ You are already on the latest version ($AID_VERSION).${NC}"
             exit 0
         fi
-        echo "🚀 New version available: $latest_version (Current: $AID_VERSION)"
+        echo -e "${BLUE}🚀 New version available: $latest_version${NC} (Current: $AID_VERSION)"
     fi
 
     echo "   Fetching latest installer from GitHub..."
     if curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash; then
         echo ""
-        echo "✅ Update complete!"
+        echo -e "${GREEN}✅ Update complete!${NC}"
         echo "   New version:"
         "$0" version
     else
-        echo "❌ Update failed. Please check your internet connection."
+        echo -e "${RED}❌ Update failed. Please check your internet connection.${NC}"
         exit 1
     fi
 }
@@ -440,23 +435,44 @@ cmd_deploy() {
     fi
 
     # 4. Generate Deployment Plan (if not exists or forced)
-    # 4. Generate Deployment Plan (if not exists or forced)
-    echo "🧠 Generating deployment plan for $platform..."
+    echo -e "${CYAN}🧠 Generating deployment plan for $platform...${NC}"
     
     stack="${PROJECT_LANGUAGE:-Auto-Detect}"
+    ptype="${PROJECT_TYPE:-Auto-Detect}"
+    
     context=$(scan_codebase)
-    prompt="You are a DevOps expert. The user has a $stack project and wants to deploy to $platform.\n\nProject Context:\n$context\n\nGenerate a detailed 'DEPLOYMENT_PLAN.md' that includes:\n1. Prerequisites\n2. Required configuration files (Dockerfile, yaml, etc.) with code snippets.\n3. Step-by-step generic deployment commands.\n4. How to use the keys stored in .env.\n\nOutput ONLY valid Markdown."
+    prompt="You are a Principal DevOps Engineer. The user has a **$stack** project (Type: **$ptype**) and wants to deploy to **$platform**.\n\n"
+    prompt="${prompt}**Project Context**:\n$context\n\n"
+    prompt="${prompt}Generate a detailed **DEPLOYMENT_PLAN.md** structured as follows:\n"
+    prompt="${prompt}### 1. 🏗️ Architecture & Prerequisites\n"
+    prompt="${prompt}- Necessary tools (CLI, accounts).\n"
+    prompt="${prompt}- Expected costs/limits for $platform.\n"
+    prompt="${prompt}### 2. ⚙️ Configuration\n"
+    prompt="${prompt}- Create/Update these files (Dockerfile, serverless.yml, etc.). provide FULL CODE content.\n"
+    prompt="${prompt}### 3. 🚀 Deployment Steps\n"
+    prompt="${prompt}- Step-by-step shell commands to deploy.\n"
+    prompt="${prompt}- How to inject environment variables (referencing local .env keys).\n"
+    prompt="${prompt}### 4. 🔍 Verification\n"
+    prompt="${prompt}- How to check logs and health.\n\n"
+    prompt="${prompt}Output ONLY valid Markdown. Use specific icons and headers to make it look professional."
     
     call_gemini "$prompt" "aid_reports/DEPLOYMENT_PLAN.md"
     cp "aid_reports/DEPLOYMENT_PLAN.md" "DEPLOYMENT_PLAN.md"
 
-    read -p "adding Agentic Deployment Integration... " confirm
+    echo -e "${GREEN}✅ Plan Generated: DEPLOYMENT_PLAN.md${NC}"
+    read -p "View plan now? [Y/n] " view_plan
+    if [[ ! "$view_plan" =~ ^[Nn]$ ]]; then
+        if command -v mdcat >/dev/null 2>&1; then mdcat "DEPLOYMENT_PLAN.md"; else cat "DEPLOYMENT_PLAN.md"; fi
+    fi
+
+    echo ""
+    read -p "Proceed with automated deployment steps? [y/N] " confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-        echo "❌ Deployment cancelled."
+        echo -e "${YELLOW}❌ Deployment execution cancelled. Follow the manual plan above.${NC}"
         exit 0
     fi
     
-    echo "🚀 Executing deployment basics..."
+    echo -e "${BLUE}🚀 Executing deployment basics...${NC}"
     case "$platform" in
         AWS) echo "aws s3 sync . s3://bucket --dryrun" ;;
         GCP) echo "gcloud run deploy --source ." ;;
