@@ -95,18 +95,28 @@ cmd_init() {
     
     # 1. Setup Gemini Key
     # 1. Setup Gemini Key
-    target_config="$CONFIG_FILE"
+    target_config=".aid/config"
+    mkdir -p ".aid"
+    
+    # Secure: Add to .gitignore if not present
+    if [ ! -f ".gitignore" ]; then
+        echo ".aid/" > .gitignore
+        echo "✅ Created .gitignore and added .aid/"
+    else
+        if ! grep -q "^\.aid/" ".gitignore"; then
+            echo "" >> .gitignore
+            echo ".aid/" >> .gitignore
+            echo "✅ Added .aid/ to .gitignore (Secured)"
+        fi
+    fi
 
     # Check if global config exists and load it
     if [ -f "$GLOBAL_CONFIG_FILE" ]; then
         source_config "$GLOBAL_CONFIG_FILE" # Helper to load
     fi
-    # Check for local .env or .aid/app.key
-    if [ -f "$CONFIG_FILE" ]; then
-        source_config "$CONFIG_FILE"
-    elif [ -f ".aid/app.key" ]; then
-        source_config ".aid/app.key"
-        target_config=".aid/app.key"
+    # Check for local .aid/config
+    if [ -f "$target_config" ]; then
+        source_config "$target_config"
     fi
 
     if [ -z "$GEMINI_API_KEY" ]; then
@@ -131,22 +141,17 @@ cmd_init() {
         done
         
         echo "Where do you want to save this key?"
-        echo "  (l) Local project (.env)"
-        echo "  (k) Local hidden key (.aid/app.key) - Keeps root clean"
+        echo "  (l) Local Secure (.aid/config) - Recommended"
         echo "  (g) Global (~/.aid/config) - Developer defaults"
-        read -p "Select [l/k/g]: " save_loc
+        read -p "Select [l/g]: " save_loc
         
         if [[ "$save_loc" == "g" ]]; then
             mkdir -p "$GLOBAL_CONFIG_DIR"
             target_config="$GLOBAL_CONFIG_FILE"
             echo "Saving to global config: $target_config"
-        elif [[ "$save_loc" == "k" ]]; then
-            mkdir -p ".aid"
-            target_config=".aid/app.key"
-            echo "Saving to local hidden key: $target_config"
         else
-            target_config="$CONFIG_FILE"
-            echo "Saving to local config: $target_config"
+            target_config=".aid/config"
+            echo "Saving to local secure config: $target_config"
         fi
 
         echo "GEMINI_API_KEY=\"$api_key\"" >> "$target_config"
@@ -154,9 +159,8 @@ cmd_init() {
         export GEMINI_API_KEY="$api_key"
         
         echo ""
-        echo "✅ Setup Complete!"
     else
-        echo "✅ Gemini API Key found (Global or Local)."
+        echo "✅ Gemini API Key found."
     fi
 
     # 2. Detect Stack (Interactive or Auto)
@@ -606,30 +610,34 @@ load_config() {
     GLOBAL_CONFIG_FILE="$HOME/.aid/config"
     # Load Global first
     source_config "$GLOBAL_CONFIG_FILE"
-    # Load Local second (override)
-    if [ -f "$CONFIG_FILE" ]; then
-        source_config "$CONFIG_FILE"
-    elif [ -f ".aid/app.key" ]; then
-        source_config ".aid/app.key"
+    
+    # Load Local Secure (.aid/config) - PRIMARY
+    if [ -f ".aid/config" ]; then
+        source_config ".aid/config"
+        CONFIG_FILE=".aid/config" # Update current active config
+    # Backwards compatibility / Override
+    elif [ -f ".env" ]; then
+        source_config ".env"
+        CONFIG_FILE=".env"
     fi
 }
 
 check_config() {
     config_found=0
-    if [ -f "$CONFIG_FILE" ]; then config_found=1; fi
-    if [ -f ".aid/app.key" ]; then config_found=1; fi
+    if [ -f ".aid/config" ]; then config_found=1; fi
+    if [ -f ".env" ]; then config_found=1; fi
     if [ -f "$HOME/.aid/config" ]; then config_found=1; fi
 
     if [ "$config_found" -eq 0 ]; then
-        echo "❌ No configuration found. Run './aid init' first."
-        echo "   (Checked .env, .aid/app.key, and ~/.aid/config)"
+        echo -e "${RED}❌ No configuration found.${NC}" 
+        echo "   Run './aid init' to setup your project."
         exit 1
     fi
     
     load_config
     
     if [ -z "$GEMINI_API_KEY" ]; then
-        echo "❌ GEMINI_API_KEY missing."
+        echo -e "${RED}❌ GEMINI_API_KEY missing.${NC}"
         exit 1
     fi
     # Use config model or default
