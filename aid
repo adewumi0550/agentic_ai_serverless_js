@@ -452,7 +452,12 @@ check_config() {
         echo "❌ Run './aid init' first."
         exit 1
     fi
-    export $(grep -v '^#' "$CONFIG_FILE" | xargs)
+    
+    # Safe loading of .env file
+    set -a
+    source "$CONFIG_FILE"
+    set +a
+    
     if [ -z "$GEMINI_API_KEY" ]; then
         echo "❌ GEMINI_API_KEY missing."
         exit 1
