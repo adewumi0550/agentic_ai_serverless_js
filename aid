@@ -518,6 +518,15 @@ cmd_push() {
     
     # Ensure ignores before adding
     ensure_gitignore
+    
+    # Safety: Remove cached ignored files if they were accidentally added
+    IGNORED_ITEMS=("node_modules" "dist" "build" ".env" ".DS_Store" ".aid" "aid_reports" "yarn-cache" "coverage")
+    for item in "${IGNORED_ITEMS[@]}"; do
+        if git ls-files --error-unmatch "$item" >/dev/null 2>&1; then
+             echo -e "${YELLOW}🧹 Removing $item from git index...${NC}"
+             git rm -r --cached "$item" >/dev/null 2>&1
+        fi
+    done
 
     if [ ! -d ".git" ]; then
         echo "❌ Not a git repository."
