@@ -100,10 +100,7 @@ cmd_init() {
     
     # 1. Setup Gemini Key
     if [ -f "$CONFIG_FILE" ]; then
-        # Use set -a to export variables automatically, but don't fail on errors
-        set -a
-        source "$CONFIG_FILE" || echo "⚠️  Warning: specific lines in .env could not be sourced."
-        set +a
+        load_config
     fi
 
     if [ -z "$GEMINI_API_KEY" ]; then
@@ -476,16 +473,54 @@ cmd_push() {
 
 # --- Helpers ---
 
+# --- Helpers ---
+
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        # Read file line by line, skipping comments and empty lines
+        while IFS='=' read -r key value || [ -n "$key" ]; do
+            # Skip comments and empty lines
+            [[ "$key" =~ ^#.*$ ]] && continue
+            [[ -z "$key" ]] && continue
+            
+            # Remove leading 'export ' if present
+            key=${key#export }
+            
+            # Trim leading/trailing whitespace from key
+            key=$(echo "$key" | xargs)
+            
+            # Remove potentially dangerous characters from key (only allow A-Z0-9_)
+            if [[ ! "$key" =~ ^[A-Z0-9_]+$ ]]; then continue; fi
+
+            # Handle value: remove surrounding quotes if present
+            # We use a loop or logic to handle values that might contain equals signs
+            # Re-assemble value if read split it (read stops at first =)
+            # Actually, IFS='=' only splits on the first one if we don't assume more?
+            # read -r key value  <-- splits at first delimiter.
+            
+            # Better approach: parse line string directly to handle 'KEY=VALUE'
+            # But the read loop with IFS='=' is standard for simple k=v.
+            
+            # Let's use a simpler safe approach:
+            # 1. Strip leading/trailing quotes from value
+            value=${value%\"}
+            value=${value#\"}
+            value=${value%\'}
+            value=${value#\'}
+            
+            # Expoert safely
+            export "$key=$value"
+        done < "$CONFIG_FILE"
+    fi
+}
+
 check_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
         echo "❌ Run './aid init' first."
         exit 1
     fi
     
-    # Safe loading of .env file
-    set -a
-    source "$CONFIG_FILE"
-    set +a
+    load_config
     
     if [ -z "$GEMINI_API_KEY" ]; then
         echo "❌ GEMINI_API_KEY missing."
