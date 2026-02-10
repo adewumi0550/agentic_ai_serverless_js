@@ -7,7 +7,7 @@
 set -e
 
 CONFIG_FILE=".env"
-GEMINI_MODEL="gemini-1.5-flash-latest"
+GEMINI_MODEL="gemini-3-flash-preview-12-2025"
 AID_VERSION="1.0.1"
 
 # Colors
@@ -60,6 +60,7 @@ cmd_update() {
 
 # 1. Configuration
 cmd_config() {
+    load_config
     if [ -z "$1" ]; then
         echo "🔧 Configuration"
         if [ -f "$CONFIG_FILE" ]; then
