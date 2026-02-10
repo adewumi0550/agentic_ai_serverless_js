@@ -152,6 +152,8 @@ cmd_init() {
     if [ -f "package.json" ]; then stack="$stack Node.js"; fi
     if [ -f "requirements.txt" ]; then stack="$stack Python"; fi
     if [ -f "go.mod" ]; then stack="$stack Go"; fi
+    if [ -f "pubspec.yaml" ]; then stack="$stack Flutter/Dart"; fi
+    if [ -f "firebase.json" ]; then stack="$stack Firebase"; fi
     
     if [ -z "$stack" ]; then stack="Unknown/Generic"; fi
     echo "   Detected: $stack"
@@ -270,6 +272,8 @@ cmd_analyze() {
     if [ -f "main.tf" ]; then infra_context="$infra_context\n- Terraform detected."; fi
     if [ -d "k8s" ] || [ -d "kubernetes" ]; then infra_context="$infra_context\n- Kubernetes manifests detected."; fi
     if [ -f "serverless.yml" ]; then infra_context="$infra_context\n- Serverless Framework detected."; fi
+    if [ -f "pubspec.yaml" ]; then infra_context="$infra_context\n- Flutter/Dart detected."; fi
+    if [ -f "firebase.json" ]; then infra_context="$infra_context\n- Firebase detected."; fi
     
     # 2. Gather File Context
     code_context=$(scan_codebase)
@@ -283,12 +287,15 @@ cmd_analyze() {
     prompt="${prompt}2. **Stack Analysis**: Language, framework, dependencies.\n"
     prompt="${prompt}   - IF WEB/HTML: Analyze for SEO tags, performance best practices (minification), and responsive design indicators.\n"
     prompt="${prompt}   - IF BACKEND: Analyze for API structure, database connections, and middleware.\n"
+    prompt="${prompt}   - IF MOBILE (Flutter): Analyze for state management (BLoC/Provider), widget structure, and asset optimization.\n"
     prompt="${prompt}3. **Architecture & Flow**: \n"
     prompt="${prompt}   - IF WEB: Recommend hosting (Vercel/Netlify/Firebase Hosting) and CDN strategy.\n"
     prompt="${prompt}   - IF BACKEND: Recommend Compute (Cloud Run/Lambda) and Database (SQL/NoSQL).\n"
+    prompt="${prompt}   - IF MOBILE: Recommend app store CI/CD (Fastlane), OTA updates, and backend integration (Firebase/Supabase).\n"
     prompt="${prompt}4. **Security Audit**: \n"
     prompt="${prompt}   - IF WEB: Check for XSS risks, CSP headers, exposed keys in client-side code.\n"
     prompt="${prompt}   - IF BACKEND: Check for injection risks, IAM roles, and secret management.\n"
+    prompt="${prompt}   - IF MOBILE: Check for insecure storage, API key exposure in binary, and deep link validation.\n"
     prompt="${prompt}5. **Action Plan**: Detailed roadmap to get this specific project to production.\n\n"
     prompt="${prompt}Format the output as a clean, professional Markdown report."
 
