@@ -221,6 +221,37 @@ cmd_refactor() {
     call_gemini "$prompt" "${file}.refactored"
 }
 
+cmd_analyze() {
+    check_config
+    echo "🔍 Analyzing project structure and infrastructure..."
+    
+    # 1. Detect Infrastructure
+    infra_context=""
+    if [ -f "Dockerfile" ]; then infra_context="$infra_context\n- Dockerfile detected."; fi
+    if [ -f "docker-compose.yml" ]; then infra_context="$infra_context\n- Docker Compose detected."; fi
+    if [ -f "main.tf" ]; then infra_context="$infra_context\n- Terraform detected."; fi
+    if [ -d "k8s" ] || [ -d "kubernetes" ]; then infra_context="$infra_context\n- Kubernetes manifests detected."; fi
+    if [ -f "serverless.yml" ]; then infra_context="$infra_context\n- Serverless Framework detected."; fi
+    
+    # 2. Gather File Context
+    code_context=$(scan_codebase)
+    
+    # 3. Build Prompt
+    prompt="You are a Principal DevOps Engineer and Software Architect. I need an 'Agentic Deployment Integration' report for this workspace.\n\n"
+    prompt="${prompt}Infrastructure Context:${infra_context}\n\n"
+    prompt="${prompt}Codebase Context:\n${code_context}\n\n"
+    prompt="${prompt}Please provide a comprehensive report covering:\n"
+    prompt="${prompt}1. **Project Stack Analysis**: Identify the language, framework, and key dependencies.\n"
+    prompt="${prompt}2. **Infrastructure Assessment**: Evaluate the existing Docker/Terraform/config files. Are they sufficient? What is missing?\n"
+    prompt="${prompt}3. **Flow & Architecture Advice**: Recommend the best CI/CD flow and cloud architecture for this specific stack.\n"
+    prompt="${prompt}4. **Security & Performance**: Highlight immediate red flags or optimization opportunities.\n"
+    prompt="${prompt}5. **Next Steps**: A prioritized list of actionable items to get this production-ready.\n\n"
+    prompt="${prompt}Format the output as a clean, professional Markdown report."
+
+    echo "🧠 Generating Agentic Report..."
+    call_gemini "$prompt" "AGENTIC_REPORT.md"
+}
+
 cmd_docs() {
     check_config
     echo "📚 Generating documentation..."
