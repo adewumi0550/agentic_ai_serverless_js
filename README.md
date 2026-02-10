@@ -1,97 +1,114 @@
 # Agentic AI Serverless SDK (ais)
 
-A cross-platform CLI tool for Agentic AI Serverless, supporting macOS, Linux, and Windows.
+A cross-platform CLI tool for Agentic AI Serverless, designed to work on macOS, Linux, and Windows.
 
-## Installation
+## 🚀 Quick Start
 
-### macOS / Linux
+### Prerequisites
+- **Git** installed on your machine.
+- **Node.js** (v18+) is required for Source and Shell Wrapper methods.
+- **No dependencies** required for the Standalone Binary method.
 
-1.  Clone the repository:
+---
+
+## 📥 Installation Methods
+
+Choose the method that works best for you.
+
+### Option 1: Standalone Binary (Recommended for non-Node users)
+Run the tool without installing Node.js.
+
+1.  **Clone the repository**:
     ```bash
     git clone https://github.com/adewumi0550/agentic_ai_serverless_js.git
     cd agentic_ai_serverless_js
     ```
 
-2.  Run the installer script:
+2.  **Generate the binaries** (requires running this once on a machine with Node.js, or downloading pre-built binaries):
+    ```bash
+    npm install
+    npm run compile
+    ```
+
+3.  **Run the binary**:
+    *   **macOS**: `./binaries/ais-macos`
+    *   **Linux**: `./binaries/ais-linux`
+    *   **Windows**: `.\binaries\ais-win.exe`
+
+---
+
+### Option 2: Shell Wrapper (Easy Setup)
+Run the tool using the helper script in the root directory.
+
+1.  **Clone and Enter Directory**:
+    ```bash
+    git clone https://github.com/adewumi0550/agentic_ai_serverless_js.git
+    cd agentic_ai_serverless_js
+    ```
+
+2.  **Make Executable & Run**:
+    ```bash
+    chmod +x ais
+    ./ais --help
+    ```
+    *Note: The script will automatically install dependencies and build the project for you.*
+
+---
+
+### Option 3: Global Installation (for Developers)
+Install `ais` as a global system command.
+
+1.  **Run the Installer (Mac/Linux)**:
     ```bash
     chmod +x install.sh
     ./install.sh
     ```
-    *Note: You may be prompted for your password to link the command globally.*
 
-3.  Alternatively, install manually:
+2.  **Manual Install**:
     ```bash
     npm install
     npm run build
     sudo npm link
     ```
 
-### Windows
+---
 
-1.  Clone the repository.
-2.  Open PowerShell as Administrator.
-3.  Run:
-    ```powershell
-    npm install
-    npm run build
-    npm link
-    ```
+## 🛠 Usage
 
-### Option 2: Use the Shell Wrapper (No Global Install)
-You can run the CLI directly without installing it globally using the `ais` script in the root directory.
-
-1.  Make the script executable:
-    ```bash
-    chmod +x ais
-    ```
-
-2.  Run commands:
-    ```bash
-    ./ais init
-    ./ais start
-    ./ais analyse
-    ```
-
-### Option 3: System Program (Standalone Binary)
-You can generate a standalone executable that works on any PC without installing Node.js or dependencies.
-
-1.  **Generate Binaries**:
-    ```bash
-    npm run compile
-    ```
-    This will create 3 executables in the `binaries/` folder:
-    *   `ais-macos`
-    *   `ais-linux`
-    *   `ais-win.exe`
-
-2.  **Run directly**:
-    ```bash
-    ./binaries/ais-macos init
-    ```
-
-## usage
+Once installed (or using `./ais` / `./binaries/ais-macos`), use the following commands:
 
 ### 1. Initialize
-Set up your environment and API keys.
+Set up your environment and Gemini API Key.
 ```bash
 ais init
-# OR
-./ais init
 ```
-This will prompt you for your Gemini API Key and save it to `.env`.
+This saves your API key to a `.env` file in the current directory.
 
-### 2. Start Agent process
-Run the agentic process to analyze files in the current directory.
+### 2. Analyze Codebase
+Run the AI agent to scan and analyze your code.
+```bash
+ais analyse
+```
+*   Scans files in the current folder.
+*   Sends code context to Gemini AI.
+*   Generates an `analysis_report.md` with architecture and quality insights.
+
+### 3. Start Agent
+Start the file processing agent (placeholder for future logic).
 ```bash
 ais start
 ```
 
-### 3. Help
-View all available commands.
+### 4. Help
+View all commands and options.
 ```bash
 ais --help
 ```
 
-## updates
-- Pull latest changes: `git pull origin main`
-- Re-run `npm run build`
+---
+
+## 🔧 Troubleshooting
+
+*   **Permission Errors (`EPERM`)**: If `npm install` fails, try using the Shell Wrapper (`./ais`) or run `sudo npm install`.
+*   **Command Not Found**: Ensure you have run `npm link` or are using the `./ais` script.
+*   **API Key Error**: Run `ais init` to ensure your `.env` file is set up correctly.
