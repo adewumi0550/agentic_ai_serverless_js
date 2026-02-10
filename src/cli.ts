@@ -6,6 +6,8 @@ import inquirer from 'inquirer';
 import fs from 'fs';
 import path from 'path';
 
+import { analyzeCommand } from './commands/analyze.js';
+
 const program = new Command();
 
 program
@@ -41,9 +43,16 @@ program
     .action(() => {
         console.log(chalk.blue('🚀 Starting Agentic AI process...'));
         console.log(chalk.yellow('ℹ️  Reading files in current directory...'));
-        // Placeholder for actual logic
         const files = fs.readdirSync(process.cwd());
         console.log(chalk.gray(`Found ${files.length} files.`));
+    });
+
+program
+    .command('analyse')
+    .alias('analyze')
+    .description('Analyze the current directory using Gemini AI')
+    .action(async () => {
+        await analyzeCommand();
     });
 
 program.parse(process.argv);
