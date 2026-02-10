@@ -70,24 +70,38 @@ cmd_config() {
         fi
         echo ""
         echo "Usage: ./aid config [key] [value]"
+        echo "       ./aid config [key] --delete"
         echo "Example: ./aid config GEMINI_MODEL gemini-1.5-pro"
         return
     fi
 
-    if [ -z "$2" ]; then
+    key="$1"
+    val="$2"
+
+    if [[ "$val" == "--delete" || "$val" == "-d" ]]; then
+        if [ -f "$CONFIG_FILE" ]; then
+            # Delete all occurrences of the key (fixes duplicates too)
+            sed -i '' "/^$key=/d" "$CONFIG_FILE"
+            echo "🗑️  Deleted $key from $CONFIG_FILE"
+        else
+            echo "❌ No config file found."
+        fi
+        return
+    fi
+
+    if [ -z "$val" ]; then
         # Get value
-        val=$(grep "^$1=" "$CONFIG_FILE" | cut -d'=' -f2)
-        echo "$1=$val"
+        val=$(grep "^$key=" "$CONFIG_FILE" | cut -d'=' -f2)
+        echo "$key=$val"
     else
         # Set value
-        if grep -q "^$1=" "$CONFIG_FILE"; then
-            # Replace existing (BSD sed compliant)
-            sed -i '' "s/^$1=.*/$1=\"$2\"/" "$CONFIG_FILE"
-        else
-            # Append new
-            echo "$1=\"$2\"" >> "$CONFIG_FILE"
+        # First, remove existing to avoid duplicates (sanitize state)
+        if [ -f "$CONFIG_FILE" ]; then
+             sed -i '' "/^$key=/d" "$CONFIG_FILE"
         fi
-        echo "✅ Set $1=\"$2\""
+        # Append new
+        echo "$key=\"$val\"" >> "$CONFIG_FILE"
+        echo "✅ Set $key=\"$val\""
     fi
 }
 
