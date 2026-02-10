@@ -76,8 +76,8 @@ cmd_init() {
             fi
 
             echo "Testing API Key..."
-            # Simple validation call (list models or get specific model info)
-            response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash?key=$api_key")
+            # Validating by listing models (more reliable than checking a specific one)
+            response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models?key=$api_key")
 
             if [ "$response" -eq 200 ]; then
                 echo "✅ API Key is valid!"
