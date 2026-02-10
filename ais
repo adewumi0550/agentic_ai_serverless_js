@@ -1,34 +1,193 @@
 #!/bin/bash
 
-# Wrapper script to run ais CLI without global installation
+# Agentic AI Serverless CLI (Pure Shell Version)
+# Uses curl and python3 (standard on macOS/Linux)
+# No Node.js or npm required.
 
 set -e
 
-# Get the directory of this script
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CONFIG_FILE=".env"
+GEMINI_MODEL="gemini-1.5-flash"
 
-# Check for Node.js
-if ! command -v node &> /dev/null; then
-    echo "❌ Node.js is required. Please install it first."
-    exit 1
-fi
+# --- Queries and Helpers ---
 
-# Check if dependencies are installed
-if [ ! -d "$DIR/node_modules" ]; then
-    echo "📦 Dependencies not found. Installing..."
-    # Try installing with current user first
-    if ! npm install --prefix "$DIR" --no-audit --no-fund --loglevel=error; then
-        echo "⚠️  Standard install failed. Trying with a temporary cache to bypass permissions..."
-        npm install --prefix "$DIR" --cache /tmp/ais-install-cache --no-audit --no-fund --loglevel=error
+# Helper to escape JSON string using Python
+escape_json() {
+    python3 -c "import json, sys; print(json.dumps(sys.stdin.read()))"
+}
+
+# Helper to extract text from Gemini Response using Python
+parse_gemini_response() {
+    python3 -c "import sys, json; print(json.load(sys.stdin)['candidates'][0]['content']['parts'][0]['text'])"
+}
+
+# --- Commands ---
+
+# --- Commands ---
+
+cmd_init() {
+    echo "👋 Welcome to Agentic AI Serverless (Shell Edition)"
+    echo "This tool connects to Google Gemini API directly."
+    echo ""
+    read -sp "Enter your Gemini API Key: " api_key
+    echo ""
+    
+    if [ -z "$api_key" ]; then
+        echo "❌ API Key cannot be empty."
+        exit 1
     fi
-fi
 
-# Check if build exists, if not build it
-if [ ! -f "$DIR/dist/cli.js" ]; then
-    echo "🔨 Building project..."
-    npm run build --prefix "$DIR"
-fi
+    echo "GEMINI_API_KEY=$api_key" > "$CONFIG_FILE"
+    echo "✅ Configuration saved to $CONFIG_FILE"
+}
 
-# Run the CLI
-# Pass all arguments to the CLI
-node "$DIR/dist/cli.js" "$@"
+cmd_start() {
+    echo "🚀 Starting Agentic AI process..."
+    count=$(find . -maxdepth 1 -type f | wc -l)
+    echo "ℹ️  Reading files in current directory... ($count files detected)"
+    echo "Placeholder: Start logic would go here."
+}
+
+check_config() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "❌ No configuration found. Please run './ais init' first."
+        exit 1
+    fi
+    # Source the .env file
+    export $(grep -v '^#' "$CONFIG_FILE" | xargs)
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo "❌ GEMINI_API_KEY not found in $CONFIG_FILE"
+        exit 1
+    fi
+}
+
+cmd_analyze() {
+    check_config
+    echo "🔍 Scanning files..."
+    
+    # Collect file contents (skipping hidden, node_modules, git, binaries)
+    context=""
+    file_list=$(find . -maxdepth 2 -type f -not -path '*/.*' -not -path '*/node_modules*' -not -path '*/dist*' -not -name 'package-lock.json' -not -name 'analysis_report.md' | head -n 20)
+    
+    for file in $file_list; do
+        if file "$file" | grep -q "text"; then
+            content=$(cat "$file")
+            context+=$'\n'"--- FILE: $file ---"$'\n'"$content"$'\n'
+        fi
+    done
+
+    if [ -z "$context" ]; then
+        echo "⚠️  No text files found to analyze."
+        exit 0
+    fi
+
+    echo "🧠 Analyzing codebase with Gemini ($GEMINI_MODEL)..."
+    prompt="You are an expert software engineer. Analyze the following codebase and provide a comprehensive report.\n\nCodebase Context:\n$context\n\nReport Structure:\n1. **Project Overview**\n2. **Architecture**\n3. **Code Quality**\n4. **Improvement Suggestions**"
+
+    call_gemini "$prompt" "analysis_report.md"
+}
+
+cmd_generate() {
+    check_config
+    if [ -z "$1" ]; then
+        echo "❌ Usage: ./ais generate \"your requirements here\""
+        exit 1
+    fi
+    
+    prompt="You are an expert coder. Generate code for the following requirement:\n\nRequest: $1\n\nProvide the code clearly within markdown code blocks."
+    
+    echo "🧠 Generating code with Gemini..."
+    call_gemini "$prompt" "generated_code.md"
+}
+
+cmd_report() {
+    if [ -f "analysis_report.md" ]; then
+        echo "📄 Opening Analysis Report..."
+        if command -v more &> /dev/null; then
+            more analysis_report.md
+        else
+            cat analysis_report.md
+        fi
+    else
+        echo "❌ No report found. Run './ais analyse' first."
+    fi
+}
+
+cmd_deploy() {
+    echo "🚀 Deploying project..."
+    # Placeholder for deployment logic (e.g., gcloud run deploy, serverless deploy)
+    if [ -f "deploy.sh" ]; then
+        ./deploy.sh
+    else
+        echo "⚠️  No 'deploy.sh' found. Please create a deployment script or configure your provider."
+        echo "Simulating deployment... Done!"
+    fi
+}
+
+call_gemini() {
+    local prompt="$1"
+    local output_file="$2"
+
+    json_payload=$(python3 -c "import json, sys; print(json.dumps({'contents': [{'parts': [{'text': sys.argv[1]}]}]}))" "$prompt")
+
+    response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$GEMINI_API_KEY" \
+        -d "$json_payload")
+
+    if echo "$response" | grep -q "\"error\":"; then
+        echo "❌ API Request Failed:"
+        echo "$response"
+        exit 1
+    fi
+
+    report=$(echo "$response" | parse_gemini_response)
+    
+    echo ""
+    echo "--- Output ---"
+    echo "$report"
+    echo ""
+    
+    echo "$report" > "$output_file"
+    echo "✅ Output saved to $output_file"
+}
+
+cmd_help() {
+    echo "Agentic AI Serverless CLI (Bash)"
+    echo "Usage: ./ais [command]"
+    echo ""
+    echo "Commands:"
+    echo "  init             Setup or change API Key"
+    echo "  analyse          Analyze current directory & generate report"
+    echo "  generate [req]   Generate code based on requirements"
+    echo "  report           View the last analysis report"
+    echo "  deploy           Deploy the project (runs deploy.sh)"
+    echo "  start            Start process (placeholder)"
+    echo "  help             Show this help"
+}
+
+# --- Main Dispatch ---
+
+case "$1" in
+    init|config)
+        cmd_init
+        ;;
+    start)
+        cmd_start
+        ;;
+    analyse|analyze)
+        cmd_analyze
+        ;;
+    generate|gen)
+        cmd_generate "$2"
+        ;;
+    report|view)
+        cmd_report
+        ;;
+    deploy)
+        cmd_deploy
+        ;;
+    *)
+        cmd_help
+        ;;
+esac

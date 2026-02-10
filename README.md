@@ -1,22 +1,19 @@
-# Agentic AI Serverless SDK (ais)
+# Agentic AI Serverless CLI (ais)
 
-A cross-platform CLI tool for Agentic AI Serverless, designed to work on macOS, Linux, and Windows.
+A lightweight, zero-dependency Shell CLI for Agentic AI Serverless.
+Powered by Google Gemini.
 
-## 🚀 Quick Start
+## 🚀 Features
 
-### Prerequisites
-- **Git** installed on your machine.
-- **Node.js** (v18+) is required for Source and Shell Wrapper methods.
-- **No dependencies** required for the Standalone Binary method.
+*   **`init`**: Securely setup your Gemini API Key.
+*   **`analyse`**: Scan your codebase and get an AI-powered architecture & quality report.
+*   **`generate`**: Generate code snippets or files using natural language prompts.
+*   **`report`**: View your latest analysis report.
+*   **`deploy`**: Deploy your project (customizable).
 
----
+## 📥 Installation
 
-## 📥 Installation Methods
-
-Choose the method that works best for you.
-
-### Option 1: Standalone Binary (Recommended for non-Node users)
-Run the tool without installing Node.js.
+No installation required! Just clone and run.
 
 1.  **Clone the repository**:
     ```bash
@@ -24,91 +21,59 @@ Run the tool without installing Node.js.
     cd agentic_ai_serverless_js
     ```
 
-2.  **Generate the binaries** (requires running this once on a machine with Node.js, or downloading pre-built binaries):
-    ```bash
-    npm install
-    npm run compile
-    ```
-
-3.  **Run the binary**:
-    *   **macOS**: `./binaries/ais-macos`
-    *   **Linux**: `./binaries/ais-linux`
-    *   **Windows**: `.\binaries\ais-win.exe`
-
----
-
-### Option 2: Shell Wrapper (Easy Setup)
-Run the tool using the helper script in the root directory.
-
-1.  **Clone and Enter Directory**:
-    ```bash
-    git clone https://github.com/adewumi0550/agentic_ai_serverless_js.git
-    cd agentic_ai_serverless_js
-    ```
-
-2.  **Make Executable & Run**:
+2.  **Make Executable**:
     ```bash
     chmod +x ais
-    ./ais --help
-    ```
-    *Note: The script will automatically install dependencies and build the project for you.*
-
----
-
-### Option 3: Global Installation (for Developers)
-Install `ais` as a global system command.
-
-1.  **Run the Installer (Mac/Linux)**:
-    ```bash
-    chmod +x install.sh
-    ./install.sh
     ```
 
-2.  **Manual Install**:
+3.  **Run**:
     ```bash
-    npm install
-    npm run build
-    sudo npm link
+    ./ais help
     ```
 
 ---
 
-## 🛠 Usage
+## 🛠 Usage Guide
 
-Once installed (or using `./ais` / `./binaries/ais-macos`), use the following commands:
-
-### 1. Initialize
-Set up your environment and Gemini API Key.
+### 1. Setup
+First, link your Gemini API Key.
 ```bash
-ais init
+./ais init
 ```
-This saves your API key to a `.env` file in the current directory.
+*This prompts for your key and saves it to `.env` (which is git-ignored).*
 
-### 2. Analyze Codebase
-Run the AI agent to scan and analyze your code.
+### 2. Analyze Code
+Understand your project structure and quality.
 ```bash
-ais analyse
+./ais analyse
 ```
 *   Scans files in the current folder.
-*   Sends code context to Gemini AI.
-*   Generates an `analysis_report.md` with architecture and quality insights.
+*   Generates `analysis_report.md`.
+*   Displays insights directly in the terminal.
 
-### 3. Start Agent
-Start the file processing agent (placeholder for future logic).
+### 3. Generate Code
+Need a new feature or script? Just ask.
 ```bash
-ais start
+./ais generate "Create a Python script to scrape a website"
+```
+*   Saves the output to `generated_code.md`.
+
+### 4. View Report
+Read the last analysis without re-running the AI.
+```bash
+./ais report
 ```
 
-### 4. Help
-View all commands and options.
+### 5. Deploy
+Run your deployment script.
 ```bash
-ais --help
+./ais deploy
 ```
+*   Currently looks for `deploy.sh`. You can customize this in the `ais` script.
 
 ---
 
-## 🔧 Troubleshooting
-
-*   **Permission Errors (`EPERM`)**: If `npm install` fails, try using the Shell Wrapper (`./ais`) or run `sudo npm install`.
-*   **Command Not Found**: Ensure you have run `npm link` or are using the `./ais` script.
-*   **API Key Error**: Run `ais init` to ensure your `.env` file is set up correctly.
+## 📋 Requirements
+*   **Bash** (standard on macOS/Linux).
+*   **Curl** (for API requests).
+*   **Python 3** (for safe JSON parsing).
