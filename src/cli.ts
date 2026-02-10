@@ -2,19 +2,48 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 
+import inquirer from 'inquirer';
+import fs from 'fs';
+import path from 'path';
+
 const program = new Command();
 
 program
-    .name('agentic-sdk')
-    .description('Agentic AI Serverless SDK CLI')
+    .name('ais')
+    .description('Agentic AI Serverless CLI')
     .version('0.1.0');
 
 program
-    .command('hello')
-    .description('Greets the user')
+    .command('init')
+    .description('Initialize the agentic process by setting up the environment')
+    .action(async () => {
+        const answers = await inquirer.prompt([
+            {
+                type: 'password',
+                name: 'apiKey',
+                message: 'Enter your Gemini API Key:',
+                mask: '*'
+            }
+        ]);
+
+        const envPath = path.join(process.cwd(), '.env');
+        try {
+            fs.writeFileSync(envPath, `GEMINI_API_KEY=${answers.apiKey}\n`);
+            console.log(chalk.green('✅ Configuration saved to .env'));
+        } catch (error) {
+            console.error(chalk.red('❌ Failed to save configuration:'), error);
+        }
+    });
+
+program
+    .command('start')
+    .description('Start the agentic process to read and process files')
     .action(() => {
-        console.log(chalk.green('Hello from Agentic AI SDK!'));
-        console.log(chalk.blue(`Running on ${process.platform}`));
+        console.log(chalk.blue('🚀 Starting Agentic AI process...'));
+        console.log(chalk.yellow('ℹ️  Reading files in current directory...'));
+        // Placeholder for actual logic
+        const files = fs.readdirSync(process.cwd());
+        console.log(chalk.gray(`Found ${files.length} files.`));
     });
 
 program.parse(process.argv);
