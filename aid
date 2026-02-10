@@ -7,8 +7,8 @@
 set -e
 
 CONFIG_FILE=".env"
-GEMINI_MODEL="gemini-3-flash-preview-12-2025"
-AID_VERSION="1.0.1"
+GEMINI_MODEL="gemini-2.5-pro"
+AID_VERSION="1.0.3"
 
 # Colors
 RED='\033[0;31m'
@@ -350,27 +350,18 @@ cmd_analyze() {
     proj_type="${PROJECT_TYPE:-Auto-Detect}"
     
     # 4. Build Prompt
-    prompt="You are a Principal DevOps Engineer and Software Architect. I need a DEEP DIVE 'Agentic Deployment Integration' report for this workspace.\n\n"
+    prompt="You are a Principal DevOps Engineer. Analyze this codebase and provide a strategic summary.\n\n"
     prompt="${prompt}Project Config: Language='$proj_lang', Type='$proj_type'\n"
     prompt="${prompt}Infrastructure Context:${infra_context}\n\n"
     prompt="${prompt}Codebase Context:\n${code_context}\n${user_rules}\n"
-    prompt="${prompt}Please provide a comprehensive report DETAILED for this specific project type:\n"
-    prompt="${prompt}1. **Executive Summary**: Identify if this is a Static Web App, SPA, Serverless Backend, or Containerized Service.\n"
-    prompt="${prompt}2. **Stack Analysis**: Language, framework, dependencies.\n"
-    prompt="${prompt}   - IF WEB/HTML: Analyze for SEO tags, performance best practices (minification), and responsive design indicators.\n"
-    prompt="${prompt}   - IF BACKEND: Analyze for API structure, database connections, and middleware.\n"
-    prompt="${prompt}   - IF MOBILE (Flutter): Analyze for state management (BLoC/Provider), widget structure, and asset optimization.\n"
-    prompt="${prompt}   - IF PHP/Legacy: Analyze for modern practices, security (SQLi), and migration paths.\n"
-    prompt="${prompt}3. **Architecture & Flow**: \n"
-    prompt="${prompt}   - IF WEB: Recommend hosting (Vercel/Netlify/Firebase Hosting) and CDN strategy.\n"
-    prompt="${prompt}   - IF BACKEND: Recommend Compute (Cloud Run/Lambda) and Database (SQL/NoSQL).\n"
-    prompt="${prompt}   - IF MOBILE: Recommend app store CI/CD (Fastlane), OTA updates, and backend integration.\n"
-    prompt="${prompt}4. **Security Audit**: \n"
-    prompt="${prompt}   - IF WEB: Check for XSS risks, CSP headers, exposed keys in client-side code.\n"
-    prompt="${prompt}   - IF BACKEND: Check for injection risks, IAM roles, and secret management.\n"
-    prompt="${prompt}   - IF MOBILE: Check for insecure storage, API key exposure in binary, and deep link validation.\n"
-    prompt="${prompt}5. **Action Plan**: Detailed roadmap to get this specific project to production.\n\n"
-    prompt="${prompt}Format the output as a clean, professional Markdown report."
+    prompt="${prompt}Please provide a report with EXACTLY the following sections:\n"
+    prompt="${prompt}1. **Product Title**: Name of the project.\n"
+    prompt="${prompt}2. **Description**: ~20 lines describing the application's purpose and architecture.\n"
+    prompt="${prompt}3. **Recommended Deployment Platform**:\n"
+    prompt="${prompt}   - **Services**: Recommended compute (e.g., EC2, Cloud Run, Cloud Functions).\n"
+    prompt="${prompt}   - **CDN**: Recommended CDN strategy.\n"
+    prompt="${prompt}   - **Deployment Platform**: Specific platform recommendation (e.g., Vercel, Google Cloud).\n\n"
+    prompt="${prompt}Keep the report high-level and strategic. Do NOT provide full implementation details or code steps."
 
     echo "🧠 Generating Agentic Report..."
     call_gemini "$prompt" "aid_reports/deployment_plan.md"
