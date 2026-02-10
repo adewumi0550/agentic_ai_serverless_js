@@ -60,48 +60,77 @@ cmd_update() {
 
 # 1. Configuration
 cmd_config() {
-    load_config
-    if [ -z "$1" ]; then
-        echo "🔧 Configuration"
-        if [ -f "$CONFIG_FILE" ]; then
-            cat "$CONFIG_FILE"
-        else
-            echo "No configuration file found."
-        fi
-        echo ""
-        echo "Usage: ./aid config [key] [value]"
-        echo "       ./aid config [key] --delete"
-        echo "Example: ./aid config GEMINI_MODEL gemini-1.5-pro"
+    GLOBAL_CONFIG_FILE="$HOME/.aid/config"
+    target_config=""
+    
+    # Handle 'clean' command first
+    if [ "$1" == "clean" ]; then
+        echo "🧹 Cleaning local configuration..."
+        if [ -f ".aid/config" ]; then rm ".aid/config"; echo "   Deleted .aid/config"; fi
+        if [ -f ".env" ]; then rm ".env"; echo "   Deleted .env"; fi
+        echo "✅ Local configuration cleaned. Now using global defaults (if any)."
         return
     fi
 
+    # Handle --global flag
+    if [[ "$*" == *"--global"* ]]; then
+        is_global=1
+        # Remove --global from args
+        set -- "${@//--global/}"
+        target_config="$GLOBAL_CONFIG_FILE"
+        mkdir -p "$HOME/.aid"
+    else
+        is_global=0
+        load_config # Sets CONFIG_FILE to local or global
+        target_config="$CONFIG_FILE"
+        # If no local config exists and we are writing, default to creating local .aid/config
+        if [ -z "$target_config" ] || [ "$target_config" == "$GLOBAL_CONFIG_FILE" ]; then
+             if [ -n "$2" ]; then # We are writing
+                 target_config=".aid/config"
+                 mkdir -p ".aid"
+             fi
+        fi
+    fi
+ 
     key="$1"
     val="$2"
 
-    if [[ "$val" == "--delete" || "$val" == "-d" ]]; then
-        if [ -f "$CONFIG_FILE" ]; then
-            # Delete all occurrences of the key (fixes duplicates too)
-            sed -i '' "/^$key=/d" "$CONFIG_FILE"
-            echo "🗑️  Deleted $key from $CONFIG_FILE"
+    if [ -z "$key" ]; then
+        echo "🔧 Configuration ($(if [ "$is_global" -eq 1 ]; then echo "Global"; else echo "Effective/Local"; fi))"
+        if [ -f "$target_config" ]; then
+            cat "$target_config"
         else
-            echo "❌ No config file found."
+            echo "No configuration file found at $target_config."
+        fi
+        echo ""
+        echo "Usage: ./aid config [key] [value] [--global]"
+        echo "       ./aid config [key] --delete"
+        echo "       ./aid config clean"
+        return
+    fi
+     
+    # ... rest of logic (delete/set) using $target_config instead of $CONFIG_FILE
+    if [[ "$val" == "--delete" || "$val" == "-d" ]]; then
+        if [ -f "$target_config" ]; then
+            sed -i '' "/^$key=/d" "$target_config"
+            echo "🗑️  Deleted $key from $target_config"
+        else
+            echo "❌ No config file found at $target_config"
         fi
         return
     fi
 
     if [ -z "$val" ]; then
         # Get value
-        val=$(grep "^$key=" "$CONFIG_FILE" | cut -d'=' -f2)
+        val=$(grep "^$key=" "$target_config" 2>/dev/null | cut -d'=' -f2)
         echo "$key=$val"
     else
         # Set value
-        # First, remove existing to avoid duplicates (sanitize state)
-        if [ -f "$CONFIG_FILE" ]; then
-             sed -i '' "/^$key=/d" "$CONFIG_FILE"
+        if [ -f "$target_config" ]; then
+             sed -i '' "/^$key=/d" "$target_config"
         fi
-        # Append new
-        echo "$key=\"$val\"" >> "$CONFIG_FILE"
-        echo "✅ Set $key=\"$val\""
+        echo "$key=\"$val\"" >> "$target_config"
+        echo "✅ Set $key=\"$val\" in $target_config"
     fi
 }
 
