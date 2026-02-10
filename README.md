@@ -37,12 +37,29 @@ A cross-platform CLI tool for Agentic AI Serverless, supporting macOS, Linux, an
     npm link
     ```
 
-## Usage
+### Option 2: Use the Shell Wrapper (No Global Install)
+You can run the CLI directly without installing it globally using the `ais` script in the root directory.
+
+1.  Make the script executable:
+    ```bash
+    chmod +x ais
+    ```
+
+2.  Run commands:
+    ```bash
+    ./ais init
+    ./ais start
+    ./ais analyse
+    ```
+
+## usage
 
 ### 1. Initialize
 Set up your environment and API keys.
 ```bash
 ais init
+# OR
+./ais init
 ```
 This will prompt you for your Gemini API Key and save it to `.env`.
 

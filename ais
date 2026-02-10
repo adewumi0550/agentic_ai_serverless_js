@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Wrapper script to run ais CLI without global installation
+
+set -e
+
+# Get the directory of this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Check for Node.js
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js is required. Please install it first."
+    exit 1
+fi
+
+# Check if dependencies are installed
+if [ ! -d "$DIR/node_modules" ]; then
+    echo "📦 Dependencies not found. Installing..."
+    # Try installing with current user first
+    if ! npm install --prefix "$DIR" --no-audit --no-fund --loglevel=error; then
+        echo "⚠️  Standard install failed. Trying with a temporary cache to bypass permissions..."
+        npm install --prefix "$DIR" --cache /tmp/ais-install-cache --no-audit --no-fund --loglevel=error
+    fi
+fi
+
+# Check if build exists, if not build it
+if [ ! -f "$DIR/dist/cli.js" ]; then
+    echo "🔨 Building project..."
+    npm run build --prefix "$DIR"
+fi
+
+# Run the CLI
+# Pass all arguments to the CLI
+node "$DIR/dist/cli.js" "$@"
