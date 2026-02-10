@@ -100,16 +100,18 @@ cmd_init() {
     
     # 1. Setup Gemini Key
     # 1. Setup Gemini Key
-    GLOBAL_CONFIG_DIR="$HOME/.aid"
-    GLOBAL_CONFIG_FILE="$GLOBAL_CONFIG_DIR/config"
     target_config="$CONFIG_FILE"
 
     # Check if global config exists and load it
     if [ -f "$GLOBAL_CONFIG_FILE" ]; then
         source_config "$GLOBAL_CONFIG_FILE" # Helper to load
     fi
+    # Check for local .env or .aid/app.key
     if [ -f "$CONFIG_FILE" ]; then
         source_config "$CONFIG_FILE"
+    elif [ -f ".aid/app.key" ]; then
+        source_config ".aid/app.key"
+        target_config=".aid/app.key"
     fi
 
     if [ -z "$GEMINI_API_KEY" ]; then
@@ -134,15 +136,21 @@ cmd_init() {
         done
         
         echo "Where do you want to save this key?"
-        echo "  (l) Local project (.env) - Good for project-specific keys"
-        echo "  (g) Global (~/.aid/config) - Good for developer defaults"
-        read -p "Select [l/g]: " save_loc
+        echo "  (l) Local project (.env)"
+        echo "  (k) Local hidden key (.aid/app.key) - Keeps root clean"
+        echo "  (g) Global (~/.aid/config) - Developer defaults"
+        read -p "Select [l/k/g]: " save_loc
         
         if [[ "$save_loc" == "g" ]]; then
             mkdir -p "$GLOBAL_CONFIG_DIR"
             target_config="$GLOBAL_CONFIG_FILE"
             echo "Saving to global config: $target_config"
+        elif [[ "$save_loc" == "k" ]]; then
+            mkdir -p ".aid"
+            target_config=".aid/app.key"
+            echo "Saving to local hidden key: $target_config"
         else
+            target_config="$CONFIG_FILE"
             echo "Saving to local config: $target_config"
         fi
 
@@ -560,7 +568,11 @@ load_config() {
     # Load Global first
     source_config "$GLOBAL_CONFIG_FILE"
     # Load Local second (override)
-    source_config "$CONFIG_FILE"
+    if [ -f "$CONFIG_FILE" ]; then
+        source_config "$CONFIG_FILE"
+    elif [ -f ".aid/app.key" ]; then
+        source_config ".aid/app.key"
+    fi
 }
 
 check_config() {
