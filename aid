@@ -32,6 +32,20 @@ cmd_version() {
     echo "aid version $AID_VERSION"
 }
 
+cmd_update() {
+    echo "🔄 Checking for updates..."
+    echo "   Fetching latest installer from GitHub..."
+    if curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash; then
+        echo ""
+        echo "✅ Update complete!"
+        echo "   New version:"
+        "$0" version
+    else
+        echo "❌ Update failed. Please check your internet connection."
+        exit 1
+    fi
+}
+
 # 1. Configuration
 cmd_config() {
     if [ -z "$1" ]; then
@@ -476,6 +490,7 @@ cmd_help() {
     echo "  init        Setup API Key"
     echo "  config      View or update configuration (e.g., ./aid config GEMINI_MODEL gemini-1.5-pro)"
     echo "  version     Show version info"
+    echo "  update      Update aid to the latest version"
     echo "  help        Show this list"
     echo ""
     echo "Agentic AI:"
@@ -500,6 +515,7 @@ case "$1" in
     init)       cmd_init ;;
     config)     cmd_config "$2" "$3" ;;
     version|-v|--version) cmd_version ;;
+    update|upgrade) cmd_update ;;
     ask)        cmd_ask "$2" ;;
     review)     cmd_review ;;
     refactor)   cmd_refactor "$2" "$3" ;;
