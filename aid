@@ -269,29 +269,34 @@ cmd_analyze() {
     infra_context=""
     if [ -f "Dockerfile" ]; then infra_context="$infra_context\n- Dockerfile detected."; fi
     if [ -f "docker-compose.yml" ]; then infra_context="$infra_context\n- Docker Compose detected."; fi
-    if [ -f "main.tf" ]; then infra_context="$infra_context\n- Terraform detected."; fi
-    if [ -d "k8s" ] || [ -d "kubernetes" ]; then infra_context="$infra_context\n- Kubernetes manifests detected."; fi
-    if [ -f "serverless.yml" ]; then infra_context="$infra_context\n- Serverless Framework detected."; fi
-    if [ -f "pubspec.yaml" ]; then infra_context="$infra_context\n- Flutter/Dart detected."; fi
-    if [ -f "firebase.json" ]; then infra_context="$infra_context\n- Firebase detected."; fi
+    if [ -f "go.mod" ]; then infra_context="$infra_context\n- Go detected."; fi
+    if [ -f "composer.json" ]; then infra_context="$infra_context\n- PHP/Composer detected."; fi
+    if [ -f "index.html" ]; then infra_context="$infra_context\n- HTML detected."; fi
     
     # 2. Gather File Context
     code_context=$(scan_codebase)
     
-    # 3. Build Prompt
+    # 3. User Rules
+    user_rules=""
+    if [ -f ".aid/rules.md" ]; then
+        user_rules="\n\nUSER CONFIG / RULES:\n$(cat .aid/rules.md)\n"
+    fi
+    
+    # 4. Build Prompt
     prompt="You are a Principal DevOps Engineer and Software Architect. I need a DEEP DIVE 'Agentic Deployment Integration' report for this workspace.\n\n"
     prompt="${prompt}Infrastructure Context:${infra_context}\n\n"
-    prompt="${prompt}Codebase Context:\n${code_context}\n\n"
+    prompt="${prompt}Codebase Context:\n${code_context}\n${user_rules}\n"
     prompt="${prompt}Please provide a comprehensive report DETAILED for this specific project type:\n"
     prompt="${prompt}1. **Executive Summary**: Identify if this is a Static Web App, SPA, Serverless Backend, or Containerized Service.\n"
     prompt="${prompt}2. **Stack Analysis**: Language, framework, dependencies.\n"
     prompt="${prompt}   - IF WEB/HTML: Analyze for SEO tags, performance best practices (minification), and responsive design indicators.\n"
     prompt="${prompt}   - IF BACKEND: Analyze for API structure, database connections, and middleware.\n"
     prompt="${prompt}   - IF MOBILE (Flutter): Analyze for state management (BLoC/Provider), widget structure, and asset optimization.\n"
+    prompt="${prompt}   - IF PHP/Legacy: Analyze for modern practices, security (SQLi), and migration paths.\n"
     prompt="${prompt}3. **Architecture & Flow**: \n"
     prompt="${prompt}   - IF WEB: Recommend hosting (Vercel/Netlify/Firebase Hosting) and CDN strategy.\n"
     prompt="${prompt}   - IF BACKEND: Recommend Compute (Cloud Run/Lambda) and Database (SQL/NoSQL).\n"
-    prompt="${prompt}   - IF MOBILE: Recommend app store CI/CD (Fastlane), OTA updates, and backend integration (Firebase/Supabase).\n"
+    prompt="${prompt}   - IF MOBILE: Recommend app store CI/CD (Fastlane), OTA updates, and backend integration.\n"
     prompt="${prompt}4. **Security Audit**: \n"
     prompt="${prompt}   - IF WEB: Check for XSS risks, CSP headers, exposed keys in client-side code.\n"
     prompt="${prompt}   - IF BACKEND: Check for injection risks, IAM roles, and secret management.\n"
@@ -301,6 +306,7 @@ cmd_analyze() {
 
     echo "🧠 Generating Agentic Report..."
     call_gemini "$prompt" "AGENTIC_REPORT.md"
+    log_history "analyze"
 }
 
 cmd_docs() {
@@ -309,6 +315,7 @@ cmd_docs() {
     context=$(scan_codebase)
     prompt="Generate comprehensive documentation for this project. Include an Overview, Setup Guide, API Reference (if applicable), and Architecture description. Output in Markdown."
     call_gemini "$prompt" "PROJECT_DOCS.md"
+    log_history "docs"
 }
 
 cmd_report() {
@@ -336,6 +343,16 @@ cmd_generate() {
     echo "👨‍💻 Generating code..."
     prompt="You are an expert software engineer. Generate high-quality, production-ready code for the following request. Return ONLY the code/markdown.\n\nRequest: $1"
     call_gemini "$prompt" "generated_code.md"
+    log_history "gen"
+}
+
+cmd_history() {
+    if [ -f ".aid/history.log" ]; then
+        echo "📜 Developer History:"
+        cat ".aid/history.log"
+    else
+        echo "No history yet."
+    fi
 }
 
 # 3. Core & Serverless
@@ -345,6 +362,8 @@ cmd_start() {
     # Placeholder: Detect project type and run appropriate start command
     if [ -f "package.json" ]; then npm start; 
     elif [ -f "main.py" ]; then python3 main.py;
+    elif [ -f "composer.json" ]; then php -S localhost:8000;
+    elif [ -f "index.html" ]; then python3 -m http.server;
     else echo "UNKNOWN PROJECT TYPE. Please add a start script."; fi
 }
 
@@ -402,6 +421,7 @@ cmd_deploy() {
         echo "   Redirecting to 'init' to setup deployment target..."
         cmd_init
     fi
+    log_history "deploy"
 }
 
 cmd_push() {
@@ -480,11 +500,19 @@ cmd_push() {
             exit 0
             ;;
     esac
+    log_history "push"
 }
 
 # --- Helpers ---
 
 # --- Helpers ---
+
+log_history() {
+    local cmd="$1"
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    mkdir -p ".aid"
+    echo "[$timestamp] $cmd" >> ".aid/history.log"
+}
 
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -504,16 +532,6 @@ load_config() {
             if [[ ! "$key" =~ ^[A-Z0-9_]+$ ]]; then continue; fi
 
             # Handle value: remove surrounding quotes if present
-            # We use a loop or logic to handle values that might contain equals signs
-            # Re-assemble value if read split it (read stops at first =)
-            # Actually, IFS='=' only splits on the first one if we don't assume more?
-            # read -r key value  <-- splits at first delimiter.
-            
-            # Better approach: parse line string directly to handle 'KEY=VALUE'
-            # But the read loop with IFS='=' is standard for simple k=v.
-            
-            # Let's use a simpler safe approach:
-            # 1. Strip leading/trailing quotes from value
             value=${value%\"}
             value=${value#\"}
             value=${value%\'}
@@ -591,6 +609,7 @@ cmd_help() {
     echo "  config      View or update configuration (e.g., ./aid config GEMINI_MODEL gemini-1.5-pro)"
     echo "  version     Show version info"
     echo "  update      Update aid to the latest version"
+    echo "  history     View command history"
     echo "  help        Show this list"
     echo ""
     echo "Agentic AI:"
@@ -616,6 +635,7 @@ case "$1" in
     config)     cmd_config "$2" "$3" ;;
     version|-v|--version) cmd_version ;;
     update|upgrade) cmd_update ;;
+    history)    cmd_history ;;
     ask)        cmd_ask "$2" ;;
     review)     cmd_review ;;
     refactor)   cmd_refactor "$2" "$3" ;;
