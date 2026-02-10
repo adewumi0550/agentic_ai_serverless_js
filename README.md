@@ -15,26 +15,15 @@ Powered by Google Gemini.
 ## 📥 Installation
 
 ### 🚀 One-Line Install (Recommended)
-Install `aid` globally to your system (`/usr/local/bin`).
+Run the following command in your terminal. This works on **macOS**, **Linux**, and **Windows** (via WSL or Git Bash).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash
 ```
-*You may be prompted for your password to install to system directories.*
+*   **macOS / Linux**: You may be prompted for your password (`sudo`) to install to `/usr/local/bin`.
+*   **Windows**: Recommended to run inside **WSL (Ubuntu)** or **Git Bash**.
 
-### Manual Install
-If you prefer to check the code first:
-
-1.  **Clone**:
-    ```bash
-    git clone https://github.com/adewumi0550/agentic_ai_serverless_js.git
-    cd agentic_ai_serverless_js
-    ```
-
-2.  **Install**:
-    ```bash
-    ./install.sh
-    ```
+> Once installed, you can run `aid` from any directory!
 
 ## 🛠 Usage Guide
 
