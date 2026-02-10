@@ -25,109 +25,152 @@ parse_gemini_response() {
 
 # --- Commands ---
 
+# 1. Configuration
+cmd_config() {
+    if [ -z "$1" ]; then
+        echo "🔧 Configuration"
+        if [ -f "$CONFIG_FILE" ]; then
+            cat "$CONFIG_FILE"
+        else
+            echo "No configuration file found."
+        fi
+        echo ""
+        echo "Usage: ./ais config [key] [value]"
+        echo "Example: ./ais config GEMINI_MODEL gemini-1.5-pro"
+        return
+    fi
+
+    if [ -z "$2" ]; then
+        # Get value
+        val=$(grep "^$1=" "$CONFIG_FILE" | cut -d'=' -f2)
+        echo "$1=$val"
+    else
+        # Set value
+        if grep -q "^$1=" "$CONFIG_FILE"; then
+            # Replace existing (BSD sed compliant)
+            sed -i '' "s/^$1=.*/$1=$2/" "$CONFIG_FILE"
+        else
+            # Append new
+            echo "$1=$2" >> "$CONFIG_FILE"
+        fi
+        echo "✅ Set $1=$2"
+    fi
+}
+
 cmd_init() {
-    echo "👋 Welcome to Agentic AI Serverless (Shell Edition)"
-    echo "This tool connects to Google Gemini API directly."
-    echo ""
+    echo "👋 Welcome to Agentic AI Serverless"
     read -sp "Enter your Gemini API Key: " api_key
     echo ""
-    
     if [ -z "$api_key" ]; then
         echo "❌ API Key cannot be empty."
         exit 1
     fi
-
     echo "GEMINI_API_KEY=$api_key" > "$CONFIG_FILE"
+    echo "GEMINI_MODEL=$GEMINI_MODEL" >> "$CONFIG_FILE"
     echo "✅ Configuration saved to $CONFIG_FILE"
 }
 
-cmd_start() {
-    echo "🚀 Starting Agentic AI process..."
-    count=$(find . -maxdepth 1 -type f | wc -l)
-    echo "ℹ️  Reading files in current directory... ($count files detected)"
-    echo "Placeholder: Start logic would go here."
-}
+# 2. Agentic Workflows
 
-check_config() {
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo "❌ No configuration found. Please run './ais init' first."
-        exit 1
-    fi
-    # Source the .env file
-    export $(grep -v '^#' "$CONFIG_FILE" | xargs)
-    if [ -z "$GEMINI_API_KEY" ]; then
-        echo "❌ GEMINI_API_KEY not found in $CONFIG_FILE"
-        exit 1
-    fi
-}
-
-cmd_analyze() {
-    check_config
-    echo "🔍 Scanning files..."
-    
-    # Collect file contents (skipping hidden, node_modules, git, binaries)
-    context=""
-    file_list=$(find . -maxdepth 2 -type f -not -path '*/.*' -not -path '*/node_modules*' -not -path '*/dist*' -not -name 'package-lock.json' -not -name 'analysis_report.md' | head -n 20)
-    
-    for file in $file_list; do
-        if file "$file" | grep -q "text"; then
-            content=$(cat "$file")
-            context+=$'\n'"--- FILE: $file ---"$'\n'"$content"$'\n'
-        fi
-    done
-
-    if [ -z "$context" ]; then
-        echo "⚠️  No text files found to analyze."
-        exit 0
-    fi
-
-    echo "🧠 Analyzing codebase with Gemini ($GEMINI_MODEL)..."
-    prompt="You are an expert software engineer. Analyze the following codebase and provide a comprehensive report.\n\nCodebase Context:\n$context\n\nReport Structure:\n1. **Project Overview**\n2. **Architecture**\n3. **Code Quality**\n4. **Improvement Suggestions**"
-
-    call_gemini "$prompt" "analysis_report.md"
-}
-
-cmd_generate() {
+cmd_ask() {
     check_config
     if [ -z "$1" ]; then
-        echo "❌ Usage: ./ais generate \"your requirements here\""
+        echo "❌ Usage: ./ais ask \"your question about the codebase\""
+        exit 1
+    fi
+    echo "🤔 Thinking..."
+    context=$(scan_codebase)
+    prompt="You are an expert developer. Answer this question based on the codebase context provided.\n\nContext:\n$context\n\nQuestion: $1"
+    call_gemini "$prompt" "ais_answer.md"
+}
+
+cmd_review() {
+    check_config
+    echo "🧐 Reviewing codebase..."
+    context=$(scan_codebase)
+    prompt="You are a senior staff engineer. Perform a thorough code review of this codebase. Focus on security, performance, and maintainability. Structure your response with a summary followed by file-by-file comments."
+    call_gemini "$prompt" "code_review.md" 
+}
+
+cmd_refactor() {
+    check_config
+    if [ -z "$1" ]; then
+        echo "❌ Usage: ./ais refactor <file_path> \"refactoring instructions\""
+        exit 1
+    fi
+    file="$1"
+    instruction="$2"
+    
+    if [ ! -f "$file" ]; then
+        echo "❌ File $file not found."
         exit 1
     fi
     
-    prompt="You are an expert coder. Generate code for the following requirement:\n\nRequest: $1\n\nProvide the code clearly within markdown code blocks."
-    
-    echo "🧠 Generating code with Gemini..."
-    call_gemini "$prompt" "generated_code.md"
+    content=$(cat "$file")
+    echo "🔧 Refactoring $file..."
+    prompt="You are an expert refactorer. Refactor the code in '$file' according to these instructions: '$instruction'. \n\nOriginal Code:\n$content\n\nReturn ONLY the full refactored code block."
+    call_gemini "$prompt" "${file}.refactored"
 }
 
-cmd_report() {
-    if [ -f "analysis_report.md" ]; then
-        echo "📄 Opening Analysis Report..."
-        if command -v more &> /dev/null; then
-            more analysis_report.md
-        else
-            cat analysis_report.md
-        fi
-    else
-        echo "❌ No report found. Run './ais analyse' first."
-    fi
+cmd_docs() {
+    check_config
+    echo "📚 Generating documentation..."
+    context=$(scan_codebase)
+    prompt="Generate comprehensive documentation for this project. Include an Overview, Setup Guide, API Reference (if applicable), and Architecture description. Output in Markdown."
+    call_gemini "$prompt" "PROJECT_DOCS.md"
+}
+
+# 3. Core & Serverless
+
+cmd_start() {
+    echo "🚀 Starting local server..."
+    # Placeholder: Detect project type and run appropriate start command
+    if [ -f "package.json" ]; then npm start; 
+    elif [ -f "main.py" ]; then python3 main.py;
+    else echo "UNKNOWN PROJECT TYPE. Please add a start script."; fi
 }
 
 cmd_deploy() {
-    echo "🚀 Deploying project..."
-    # Placeholder for deployment logic (e.g., gcloud run deploy, serverless deploy)
-    if [ -f "deploy.sh" ]; then
-        ./deploy.sh
-    else
-        echo "⚠️  No 'deploy.sh' found. Please create a deployment script or configure your provider."
-        echo "Simulating deployment... Done!"
+    echo "☁️  Deploying..."
+    # Placeholder: looking for common deployment scripts
+    if [ -f "deploy.sh" ]; then ./deploy.sh;
+    elif [ -f "serverless.yml" ]; then sls deploy;
+    elif [ -f "gcloud" ]; then gcloud run deploy;
+    else echo "⚠️  No deployment config found (deploy.sh, serverless.yml)."; fi
+}
+
+# --- Helpers ---
+
+check_config() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "❌ Run './ais init' first."
+        exit 1
     fi
+    export $(grep -v '^#' "$CONFIG_FILE" | xargs)
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo "❌ GEMINI_API_KEY missing."
+        exit 1
+    fi
+    # Use config model or default
+    if [ -n "$GEMINI_MODEL" ]; then GEMINI_MODEL="$GEMINI_MODEL"; fi
+}
+
+scan_codebase() {
+    # Helper to gather context
+    find . -maxdepth 2 -type f -not -path '*/.*' -not -path '*/node_modules*' -not -path '*/dist*' -not -name 'package-lock.json' -not -name '*.md' | head -n 20 | while read file; do
+        if file "$file" | grep -q "text"; then
+            echo "--- FILE: $file ---"
+            cat "$file"
+            echo ""
+        fi
+    done
 }
 
 call_gemini() {
     local prompt="$1"
     local output_file="$2"
-
+    
+    # Escape prompt for JSON
     json_payload=$(python3 -c "import json, sys; print(json.dumps({'contents': [{'parts': [{'text': sys.argv[1]}]}]}))" "$prompt")
 
     response=$(curl -s -X POST \
@@ -136,58 +179,60 @@ call_gemini() {
         -d "$json_payload")
 
     if echo "$response" | grep -q "\"error\":"; then
-        echo "❌ API Request Failed:"
+        echo "❌ API Error"
         echo "$response"
         exit 1
     fi
 
-    report=$(echo "$response" | parse_gemini_response)
-    
-    echo ""
-    echo "--- Output ---"
-    echo "$report"
-    echo ""
+    # Extract text
+    report=$(echo "$response" | python3 -c "import sys, json; print(json.load(sys.stdin)['candidates'][0]['content']['parts'][0]['text'])")
     
     echo "$report" > "$output_file"
     echo "✅ Output saved to $output_file"
+    echo ""
+    # Optional: Print preview
+    echo "$report" | head -n 10
+    echo "... (full output in $output_file)"
 }
 
+
 cmd_help() {
-    echo "Agentic AI Serverless CLI (Bash)"
-    echo "Usage: ./ais [command]"
+    echo "🤖 Agentic AI Serverless CLI"
+    echo "usage: ./ais <command> [args]"
     echo ""
-    echo "Commands:"
-    echo "  init             Setup or change API Key"
-    echo "  analyse          Analyze current directory & generate report"
-    echo "  generate [req]   Generate code based on requirements"
-    echo "  report           View the last analysis report"
-    echo "  deploy           Deploy the project (runs deploy.sh)"
-    echo "  start            Start process (placeholder)"
-    echo "  help             Show this help"
+    echo "Core:"
+    echo "  init        Setup API Key"
+    echo "  config      View or update configuration (e.g., ./ais config GEMINI_MODEL gemini-1.5-pro)"
+    echo "  help        Show this list"
+    echo ""
+    echo "Agentic AI:"
+    echo "  ask         Ask a question about your codebase"
+    echo "  analyse     Analyze architecture & quality"
+    echo "  review      Perform a comprehensive code review"
+    echo "  refactor    Refactor a specific file (./ais refactor file.js \"instructions\")"
+    echo "  gen         Generate code from a prompt"
+    echo "  docs        Generate project documentation (PROJECT_DOCS.md)"
+    echo "  report      View last analysis report"
+    echo ""
+    echo "Serverless & Ops:"
+    echo "  start       Start local server (auto-detects project type)"
+    echo "  deploy      Deploy project (runs deploy.sh, sls deploy, etc.)"
+    echo ""
 }
 
 # --- Main Dispatch ---
 
 case "$1" in
-    init|config)
-        cmd_init
-        ;;
-    start)
-        cmd_start
-        ;;
-    analyse|analyze)
-        cmd_analyze
-        ;;
-    generate|gen)
-        cmd_generate "$2"
-        ;;
-    report|view)
-        cmd_report
-        ;;
-    deploy)
-        cmd_deploy
-        ;;
-    *)
-        cmd_help
-        ;;
+    init)       cmd_init ;;
+    config)     cmd_config "$2" "$3" ;;
+    ask)        cmd_ask "$2" ;;
+    review)     cmd_review ;;
+    refactor)   cmd_refactor "$2" "$3" ;;
+    docs)       cmd_docs ;;
+    analyse|analyze) cmd_analyze ;; # From previous scan logic (can alias to review or keep separate)
+    generate|gen)    cmd_generate "$2" ;;
+    report)     cmd_report ;;
+    start)      cmd_start ;;
+    deploy)     cmd_deploy ;;
+    *)          cmd_help ;;
 esac
