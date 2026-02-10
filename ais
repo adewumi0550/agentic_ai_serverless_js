@@ -59,15 +59,96 @@ cmd_config() {
 
 cmd_init() {
     echo "👋 Welcome to Agentic AI Serverless"
-    read -sp "Enter your Gemini API Key: " api_key
-    echo ""
-    if [ -z "$api_key" ]; then
-        echo "❌ API Key cannot be empty."
-        exit 1
+    
+    # 1. Setup Gemini Key
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
     fi
-    echo "GEMINI_API_KEY=$api_key" > "$CONFIG_FILE"
-    echo "GEMINI_MODEL=$GEMINI_MODEL" >> "$CONFIG_FILE"
+
+    if [ -z "$GEMINI_API_KEY" ]; then
+        read -sp "Enter your Gemini API Key: " api_key
+        echo ""
+        if [ -z "$api_key" ]; then
+            echo "❌ API Key cannot be empty."
+            exit 1
+        fi
+        echo "GEMINI_API_KEY=$api_key" >> "$CONFIG_FILE"
+        echo "GEMINI_MODEL=$GEMINI_MODEL" >> "$CONFIG_FILE"
+        export GEMINI_API_KEY=$api_key
+    else
+        echo "✅ Gemini API Key found."
+    fi
+
+    # 2. Detect Stack
+    echo "🔍 Detecting technology stack..."
+    stack=""
+    if [ -f "Dockerfile" ]; then stack="$stack Docker"; fi
+    if [ -f "package.json" ]; then stack="$stack Node.js"; fi
+    if [ -f "requirements.txt" ]; then stack="$stack Python"; fi
+    if [ -f "go.mod" ]; then stack="$stack Go"; fi
+    
+    if [ -z "$stack" ]; then stack="Unknown/Generic"; fi
+    echo "   Detected: $stack"
+
+    # 3. Choose Deployment Platform
+    echo ""
+    echo "🚀 Choose your deployment target:"
+    echo "1. AWS"
+    echo "2. GCP (Google Cloud)"
+    echo "3. Vercel"
+    echo "4. Render"
+    echo "5. DigitalOcean"
+    echo "6. Other (Generic)"
+    read -p "Select (1-6): " platform_choice
+
+    case "$platform_choice" in
+        1)
+            platform="AWS"
+            read -p "AWS Access Key ID: " aws_key
+            read -sp "AWS Secret Access Key: " aws_secret
+            echo ""
+            echo "AWS_ACCESS_KEY_ID=$aws_key" >> "$CONFIG_FILE"
+            echo "AWS_SECRET_ACCESS_KEY=$aws_secret" >> "$CONFIG_FILE"
+            ;;
+        2)
+            platform="GCP"
+            read -p "GCP Project ID: " gcp_project
+            echo "GCP_PROJECT_ID=$gcp_project" >> "$CONFIG_FILE"
+            echo "ℹ️  Note: Ensure you have 'gcloud' installed and authenticated."
+            ;;
+        3)
+            platform="Vercel"
+            read -sp "Vercel Token: " vercel_token
+            echo ""
+            echo "VERCEL_TOKEN=$vercel_token" >> "$CONFIG_FILE"
+            ;;
+        4)
+            platform="Render"
+            read -sp "Render API Key: " render_key
+            echo ""
+            echo "RENDER_API_KEY=$render_key" >> "$CONFIG_FILE"
+            ;;
+        5)
+            platform="DigitalOcean"
+            read -sp "DO Personal Access Token: " do_token
+            echo ""
+            echo "DIGITALOCEAN_TOKEN=$do_token" >> "$CONFIG_FILE"
+            ;;
+        *)
+            platform="Generic"
+            ;;
+    esac
+
     echo "✅ Configuration saved to $CONFIG_FILE"
+    echo "DEPLOYMENT_PLATFORM=$platform" >> "$CONFIG_FILE"
+
+    # 4. Generate Deployment Plan
+    echo "🧠 Generating deployment plan for $platform ($stack)..."
+    
+    context=$(scan_codebase)
+    prompt="You are a DevOps expert. The user has a $stack project and wants to deploy to $platform.\n\nProject Context:\n$context\n\nGenerate a detailed 'DEPLOYMENT_PLAN.md' that includes:\n1. Prerequisites\n2. Required configuration files (Dockerfile, yaml, etc.) with code snippets.\n3. Step-by-step generic deployment commands.\n4. How to use the keys stored in .env.\n\nOutput ONLY valid Markdown."
+    
+    call_gemini "$prompt" "DEPLOYMENT_PLAN.md"
 }
 
 # 2. Agentic Workflows

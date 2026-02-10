@@ -5,10 +5,15 @@ This document provides a comprehensive guide to all available commands in the `a
 ## ⚡️ Core Commands
 
 ### `init`
-Sets up your environment configuration.
+Interactive setup for your environment and deployment.
 *   **Usage**: `./ais init`
-*   **Action**: Prompts for your Google Gemini API Key and saves it to `.env`.
-*   **When to use**: First time setup or when your API key changes.
+*   **Actions**:
+    1.  Sets up **Gemini API Key**.
+    2.  **Auto-detects** your tech stack (Node.js, Docker, Python, etc.).
+    3.  Asks for your preferred **Deployment Platform** (AWS, GCP, Vercel, etc.).
+    4.  Captures platform-specific keys (e.g., `AWS_ACCESS_KEY_ID`, `VERCEL_TOKEN`) securely into `.env`.
+    5.  Generates a custom `DEPLOYMENT_PLAN.md` based on your choices.
+*   **When to use**: First time setup or when changing deployment targets.
 
 ### `config`
 View or modify configuration settings.
