@@ -99,8 +99,17 @@ cmd_init() {
     echo "👋 Welcome to Agentic Deployment Integration"
     
     # 1. Setup Gemini Key
+    # 1. Setup Gemini Key
+    GLOBAL_CONFIG_DIR="$HOME/.aid"
+    GLOBAL_CONFIG_FILE="$GLOBAL_CONFIG_DIR/config"
+    target_config="$CONFIG_FILE"
+
+    # Check if global config exists and load it
+    if [ -f "$GLOBAL_CONFIG_FILE" ]; then
+        source_config "$GLOBAL_CONFIG_FILE" # Helper to load
+    fi
     if [ -f "$CONFIG_FILE" ]; then
-        load_config
+        source_config "$CONFIG_FILE"
     fi
 
     if [ -z "$GEMINI_API_KEY" ]; then
@@ -114,7 +123,6 @@ cmd_init() {
             fi
 
             echo "Testing API Key..."
-            # Validating by listing models (more reliable than checking a specific one)
             response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models?key=$api_key")
 
             if [ "$response" -eq 200 ]; then
@@ -122,27 +130,30 @@ cmd_init() {
                 break
             else
                 echo "❌ Invalid API Key (HTTP $response). Please try again."
-                echo "   Make sure you copied it correctly from Google AI Studio."
             fi
         done
+        
+        echo "Where do you want to save this key?"
+        echo "  (l) Local project (.env) - Good for project-specific keys"
+        echo "  (g) Global (~/.aid/config) - Good for developer defaults"
+        read -p "Select [l/g]: " save_loc
+        
+        if [[ "$save_loc" == "g" ]]; then
+            mkdir -p "$GLOBAL_CONFIG_DIR"
+            target_config="$GLOBAL_CONFIG_FILE"
+            echo "Saving to global config: $target_config"
+        else
+            echo "Saving to local config: $target_config"
+        fi
 
-        echo "GEMINI_API_KEY=\"$api_key\"" >> "$CONFIG_FILE"
-        echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$CONFIG_FILE"
+        echo "GEMINI_API_KEY=\"$api_key\"" >> "$target_config"
+        echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$target_config"
         export GEMINI_API_KEY="$api_key"
         
         echo ""
-        echo "✅ Setup Complete! Welcome to:"
-        echo ""
-        echo "    _    ___ ____  "
-        echo "   / \  |_ _|  _ \ "
-        echo "  / _ \  | || | | |"
-        echo " / ___ \ | || |_| |"
-        echo "/_/   \_\___|____/ "
-        echo "Agentic Deployment Integration"
-        echo "------------------------------"
-        echo ""
+        echo "✅ Setup Complete!"
     else
-        echo "✅ Gemini API Key found."
+        echo "✅ Gemini API Key found (Global or Local)."
     fi
 
     # 2. Detect Stack
@@ -514,33 +525,42 @@ log_history() {
     echo "[$timestamp] $cmd" >> ".aid/history.log"
 }
 
-load_config() {
-    if [ -f "$CONFIG_FILE" ]; then
-        # Read file line by line, skipping comments and empty lines
+source_config() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        # Read file line by line
         while IFS='=' read -r key value || [ -n "$key" ]; do
             # Skip comments and empty lines
             [[ "$key" =~ ^#.*$ ]] && continue
             [[ -z "$key" ]] && continue
             
-            # Remove leading 'export ' if present
+            # Remove leading 'export '
             key=${key#export }
             
-            # Trim leading/trailing whitespace from key
+            # Trim whitespace
             key=$(echo "$key" | xargs)
             
-            # Remove potentially dangerous characters from key (only allow A-Z0-9_)
+            # Validate key
             if [[ ! "$key" =~ ^[A-Z0-9_]+$ ]]; then continue; fi
 
-            # Handle value: remove surrounding quotes if present
+            # Clean value
             value=${value%\"}
             value=${value#\"}
             value=${value%\'}
             value=${value#\'}
             
-            # Expoert safely
+            # Export
             export "$key=$value"
-        done < "$CONFIG_FILE"
+        done < "$file"
     fi
+}
+
+load_config() {
+    GLOBAL_CONFIG_FILE="$HOME/.aid/config"
+    # Load Global first
+    source_config "$GLOBAL_CONFIG_FILE"
+    # Load Local second (override)
+    source_config "$CONFIG_FILE"
 }
 
 check_config() {
