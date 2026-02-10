@@ -52,6 +52,23 @@ You can run the CLI directly without installing it globally using the `ais` scri
     ./ais analyse
     ```
 
+### Option 3: System Program (Standalone Binary)
+You can generate a standalone executable that works on any PC without installing Node.js or dependencies.
+
+1.  **Generate Binaries**:
+    ```bash
+    npm run compile
+    ```
+    This will create 3 executables in the `binaries/` folder:
+    *   `ais-macos`
+    *   `ais-linux`
+    *   `ais-win.exe`
+
+2.  **Run directly**:
+    ```bash
+    ./binaries/ais-macos init
+    ```
+
 ## usage
 
 ### 1. Initialize
