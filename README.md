@@ -14,16 +14,24 @@ Powered by Google Gemini.
 
 ## 📥 Installation
 
-### 🚀 One-Line Install (Recommended)
-Run the following command in your terminal. This works on **macOS**, **Linux**, and **Windows** (via WSL or Git Bash).
+### 🚀 Quick Install
 
+Run the following command in your terminal:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash
 ```
-*   **macOS / Linux**: You may be prompted for your password (`sudo`) to install to `/usr/local/bin`.
-*   **Windows**: Recommended to run inside **WSL (Ubuntu)** or **Git Bash**.
 
-> Once installed, you can run `aid` from any directory!
+### 🌍 Platform Specifics
+
+**macOS / Linux**:
+*   The script installs `aid` to `/usr/local/bin` so you can run it from anywhere.
+*   You may be prompted for your password (`sudo`) to allow this write access.
+
+**Windows**:
+*   We strongly recommend using **WSL (Windows Subsystem for Linux)** or **Git Bash**.
+*   Standard Command Prompt (cmd.exe) and PowerShell are **not supported** directly as this is a Bash script.
+
+> Once installed, you can simply run `aid init` from any directory to get started!
 
 ## 🛠 Usage Guide
 
