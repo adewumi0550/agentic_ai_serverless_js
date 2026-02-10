@@ -14,7 +14,16 @@ Powered by Google Gemini.
 
 ## 📥 Installation
 
-No complex installation. Just clone and run.
+### 🚀 One-Line Install (Recommended)
+Install `ais` globally to your system (`/usr/local/bin`).
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash
+```
+*You may be prompted for your password to install to system directories.*
+
+### Manual Install
+If you prefer to check the code first:
 
 1.  **Clone**:
     ```bash
@@ -22,9 +31,9 @@ No complex installation. Just clone and run.
     cd agentic_ai_serverless_js
     ```
 
-2.  **Make Executable**:
+2.  **Install**:
     ```bash
-    chmod +x ais
+    ./install.sh
     ```
 
 ## 🛠 Usage Guide
