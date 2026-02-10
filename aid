@@ -333,6 +333,84 @@ cmd_deploy() {
     fi
 }
 
+cmd_push() {
+    check_config
+
+    if [ ! -d ".git" ]; then
+        echo "❌ Not a git repository."
+        exit 1
+    fi
+
+    echo "🕵️  Scanning for changes..."
+    # Auto-stage all changes
+    git add .
+    
+    # Check if there are changes to commit
+    if git diff --cached --quiet; then
+        echo "✅ No changes to commit."
+        # Check if there are commits to push
+        unpushed=$(git log origin/main..HEAD 2>/dev/null)
+        if [ -n "$unpushed" ]; then
+             echo "🚀 Pushing existing commits..."
+             git push
+             exit 0
+        fi
+        exit 0
+    fi
+
+    echo "🧠 Generating semantic commit message..."
+    
+    # Get diff for context (limit lines to avoid huge payloads)
+    diff_content=$(git diff --cached | head -n 50)
+    
+    prompt="You are a senior developer. Generate a CONCISE, Conventional Commit message (e.g., 'feat: ...', 'fix: ...', 'docs: ...') for this diff. Return ONLY the message string. Do not use quotes.\n\nDiff Context:\n$diff_content"
+    
+    # Generate message to a temp file
+    call_gemini "$prompt" ".commit_msg.tmp" > /dev/null 2>&1
+    
+    if [ ! -f ".commit_msg.tmp" ]; then
+        echo "❌ Failed to generate commit message."
+        exit 1
+    fi
+    
+    commit_msg=$(cat ".commit_msg.tmp")
+    rm ".commit_msg.tmp"
+    
+    echo ""
+    echo "--------------------------------------------------"
+    echo "🤖 Proposed Commit Message:"
+    echo "   $commit_msg"
+    echo "--------------------------------------------------"
+    echo ""
+    
+    echo "Do you want to proceed?"
+    echo "  (y) Yes, commit and push"
+    echo "  (n) No, abort"
+    echo "  (e) Edit message manually"
+    read -p "Select [y/n/e]: " choice
+    
+    case "$choice" in
+        y|Y)
+            echo "🚀 Committing..."
+            git commit -m "$commit_msg"
+            echo "☁️  Pushing to remote..."
+            git push
+            echo "✅ Done!"
+            ;;
+        e|E)
+            read -p "Enter your commit message: " custom_msg
+            git commit -m "$custom_msg"
+            echo "☁️  Pushing to remote..."
+            git push
+            echo "✅ Done!"
+            ;;
+        *)
+            echo "❌ Aborted. Changes are staged."
+            exit 0
+            ;;
+    esac
+}
+
 # --- Helpers ---
 
 check_config() {
