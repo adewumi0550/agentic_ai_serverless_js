@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Agentic AI Serverless Installer
-# Installs 'ais' to /usr/local/bin
+# Agentic Deployment Integration Installer
+# Installs 'aid' to /usr/local/bin
 
 set -e
 
 INSTALL_DIR="/usr/local/bin"
-BIN_NAME="ais"
-REPO_URL="https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/ais"
+BIN_NAME="aid"
+REPO_URL="https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/aid"
 
-echo "🚀 Installing Agentic AI Serverless CLI..."
+echo "🚀 Installing Agentic Deployment Integration CLI..."
 
 # Check for sudo/root
 if [ "$EUID" -ne 0 ]; then
@@ -20,9 +20,9 @@ else
 fi
 
 # Download or Copy
-if [ -f "./ais" ]; then
+if [ -f "./aid" ]; then
     echo "📂 Installing from local source..."
-    $SUDO cp ./ais "$INSTALL_DIR/$BIN_NAME"
+    $SUDO cp ./aid "$INSTALL_DIR/$BIN_NAME"
 else
     echo "⬇️  Downloading from GitHub..."
     $SUDO curl -fsSL "$REPO_URL" -o "$INSTALL_DIR/$BIN_NAME"
@@ -32,10 +32,10 @@ fi
 $SUDO chmod +x "$INSTALL_DIR/$BIN_NAME"
 
 echo ""
-echo "✅ Successfully installed 'ais' to $INSTALL_DIR/$BIN_NAME"
+echo "✅ Successfully installed 'aid' to $INSTALL_DIR/$BIN_NAME"
 echo ""
 echo "Usage:"
-echo "  ais init      # Setup your API Key"
-echo "  ais help      # Show commands"
+echo "  aid init      # Setup your API Key"
+echo "  aid help      # Show commands"
 echo ""
-echo "🌟 You can now run 'ais' from any directory!"
+echo "🌟 You can now run 'aid' from any directory!"

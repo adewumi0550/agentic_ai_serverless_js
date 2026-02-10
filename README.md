@@ -1,6 +1,6 @@
-# Agentic AI Serverless CLI (ais)
+# Agentic Deployment Integration CLI (aid)
 
-A lightweight, zero-dependency Shell CLI for Agentic AI Serverless.
+A lightweight, zero-dependency Shell CLI for Agentic Deployment Integration.
 Powered by Google Gemini.
 
 ## 🚀 Features
@@ -15,7 +15,7 @@ Powered by Google Gemini.
 ## 📥 Installation
 
 ### 🚀 One-Line Install (Recommended)
-Install `ais` globally to your system (`/usr/local/bin`).
+Install `aid` globally to your system (`/usr/local/bin`).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_js/main/install.sh | bash
@@ -41,12 +41,12 @@ If you prefer to check the code first:
 ### 1. Configuration
 Setup your environment.
 ```bash
-./ais init
+./aid init
 ```
 View or update settings:
 ```bash
-./ais config
-./ais config GEMINI_MODEL gemini-1.5-pro
+./aid config
+./aid config GEMINI_MODEL gemini-1.5-pro
 ```
 
 ### 2. Agentic Workflows
@@ -54,28 +54,28 @@ Leverage AI to accelerate development.
 
 *   **Ask Questions**:
     ```bash
-    ./ais ask "How does the auth flow work?"
+    ./aid ask "How does the auth flow work?"
     ```
 *   **Analyze Codebase**:
     ```bash
-    ./ais analyse
+    ./aid analyse
     ```
 *   **Code Review**:
     ```bash
-    ./ais review
+    ./aid review
     ```
 *   **Refactor Code**:
     ```bash
-    ./ais refactor src/main.js "Convert this to async/await"
+    ./aid refactor src/main.js "Convert this to async/await"
     ```
 *   **Generate Docs**:
     ```bash
-    ./ais docs
+    ./aid docs
     ```
 
 ### 3. Ops & Serverless
-*   **Local Dev**: `./ais start` (Auto-detects project type)
-*   **Deploy**: `./ais deploy` (Runs `deploy.sh` etc.)
+*   **Local Dev**: `./aid start` (Auto-detects project type)
+*   **Deploy**: `./aid deploy` (Runs `deploy.sh` etc.)
 
 ---
 

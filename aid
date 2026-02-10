@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Agentic AI Serverless CLI (Pure Shell Version)
+# Agentic Deployment Integration CLI (Pure Shell Version)
 # Uses curl and python3 (standard on macOS/Linux)
 # No Node.js or npm required.
 
@@ -35,8 +35,8 @@ cmd_config() {
             echo "No configuration file found."
         fi
         echo ""
-        echo "Usage: ./ais config [key] [value]"
-        echo "Example: ./ais config GEMINI_MODEL gemini-1.5-pro"
+        echo "Usage: ./aid config [key] [value]"
+        echo "Example: ./aid config GEMINI_MODEL gemini-1.5-pro"
         return
     fi
 
@@ -58,7 +58,7 @@ cmd_config() {
 }
 
 cmd_init() {
-    echo "👋 Welcome to Agentic AI Serverless"
+    echo "👋 Welcome to Agentic Deployment Integration"
     
     # 1. Setup Gemini Key
     if [ -f "$CONFIG_FILE" ]; then
@@ -66,15 +66,43 @@ cmd_init() {
     fi
 
     if [ -z "$GEMINI_API_KEY" ]; then
-        read -sp "Enter your Gemini API Key: " api_key
-        echo ""
-        if [ -z "$api_key" ]; then
-            echo "❌ API Key cannot be empty."
-            exit 1
-        fi
+        while true; do
+            read -sp "Enter your Gemini API Key: " api_key
+            echo ""
+            
+            if [ -z "$api_key" ]; then
+                echo "❌ API Key cannot be empty."
+                continue
+            fi
+
+            echo "Testing API Key..."
+            # Simple validation call (list models or get specific model info)
+            response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash?key=$api_key")
+
+            if [ "$response" -eq 200 ]; then
+                echo "✅ API Key is valid!"
+                break
+            else
+                echo "❌ Invalid API Key (HTTP $response). Please try again."
+                echo "   Make sure you copied it correctly from Google AI Studio."
+            fi
+        done
+
         echo "GEMINI_API_KEY=$api_key" >> "$CONFIG_FILE"
         echo "GEMINI_MODEL=$GEMINI_MODEL" >> "$CONFIG_FILE"
         export GEMINI_API_KEY=$api_key
+        
+        echo ""
+        echo "✅ Setup Complete! Welcome to:"
+        echo ""
+        echo "    _    ___ ____  "
+        echo "   / \  |_ _|  _ \ "
+        echo "  / _ \  | || | | |"
+        echo " / ___ \ | || |_| |"
+        echo "/_/   \_\___|____/ "
+        echo "Agentic Deployment Integration"
+        echo "------------------------------"
+        echo ""
     else
         echo "✅ Gemini API Key found."
     fi
@@ -156,13 +184,13 @@ cmd_init() {
 cmd_ask() {
     check_config
     if [ -z "$1" ]; then
-        echo "❌ Usage: ./ais ask \"your question about the codebase\""
+        echo "❌ Usage: ./aid ask \"your question about the codebase\""
         exit 1
     fi
     echo "🤔 Thinking..."
     context=$(scan_codebase)
     prompt="You are an expert developer. Answer this question based on the codebase context provided.\n\nContext:\n$context\n\nQuestion: $1"
-    call_gemini "$prompt" "ais_answer.md"
+    call_gemini "$prompt" "aid_answer.md"
 }
 
 cmd_review() {
@@ -176,7 +204,7 @@ cmd_review() {
 cmd_refactor() {
     check_config
     if [ -z "$1" ]; then
-        echo "❌ Usage: ./ais refactor <file_path> \"refactoring instructions\""
+        echo "❌ Usage: ./aid refactor <file_path> \"refactoring instructions\""
         exit 1
     fi
     file="$1"
@@ -224,7 +252,7 @@ cmd_deploy() {
 
 check_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
-        echo "❌ Run './ais init' first."
+        echo "❌ Run './aid init' first."
         exit 1
     fi
     export $(grep -v '^#' "$CONFIG_FILE" | xargs)
@@ -278,19 +306,19 @@ call_gemini() {
 
 
 cmd_help() {
-    echo "🤖 Agentic AI Serverless CLI"
-    echo "usage: ./ais <command> [args]"
+    echo "🤖 Agentic Deployment Integration CLI"
+    echo "usage: ./aid <command> [args]"
     echo ""
     echo "Core:"
     echo "  init        Setup API Key"
-    echo "  config      View or update configuration (e.g., ./ais config GEMINI_MODEL gemini-1.5-pro)"
+    echo "  config      View or update configuration (e.g., ./aid config GEMINI_MODEL gemini-1.5-pro)"
     echo "  help        Show this list"
     echo ""
     echo "Agentic AI:"
     echo "  ask         Ask a question about your codebase"
     echo "  analyse     Analyze architecture & quality"
     echo "  review      Perform a comprehensive code review"
-    echo "  refactor    Refactor a specific file (./ais refactor file.js \"instructions\")"
+    echo "  refactor    Refactor a specific file (./aid refactor file.js \"instructions\")"
     echo "  gen         Generate code from a prompt"
     echo "  docs        Generate project documentation (PROJECT_DOCS.md)"
     echo "  report      View last analysis report"
