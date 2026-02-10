@@ -164,78 +164,47 @@ cmd_init() {
         echo "✅ Gemini API Key found (Global or Local)."
     fi
 
-    # 2. Detect Stack
-    echo "🔍 Detecting technology stack..."
-    stack=""
-    if [ -f "Dockerfile" ]; then stack="$stack Docker"; fi
-    if [ -f "package.json" ]; then stack="$stack Node.js"; fi
-    if [ -f "requirements.txt" ]; then stack="$stack Python"; fi
-    if [ -f "go.mod" ]; then stack="$stack Go"; fi
-    if [ -f "pubspec.yaml" ]; then stack="$stack Flutter/Dart"; fi
-    if [ -f "firebase.json" ]; then stack="$stack Firebase"; fi
-    
-    if [ -z "$stack" ]; then stack="Unknown/Generic"; fi
-    echo "   Detected: $stack"
-
-    # 3. Choose Deployment Platform
+    # 2. Detect Stack (Interactive or Auto)
     echo ""
-    echo "🚀 Choose your deployment target:"
-    echo "1. AWS"
-    echo "2. GCP (Google Cloud)"
-    echo "3. Vercel"
-    echo "4. Render"
-    echo "5. DigitalOcean"
-    echo "6. Other (Generic)"
-    read -p "Select (1-6): " platform_choice
-
-    case "$platform_choice" in
-        1)
-            platform="AWS"
-            read -p "AWS Access Key ID: " aws_key
-            read -sp "AWS Secret Access Key: " aws_secret
-            echo ""
-            echo "AWS_ACCESS_KEY_ID=\"$aws_key\"" >> "$CONFIG_FILE"
-            echo "AWS_SECRET_ACCESS_KEY=\"$aws_secret\"" >> "$CONFIG_FILE"
-            ;;
-        2)
-            platform="GCP"
-            read -p "GCP Project ID: " gcp_project
-            echo "GCP_PROJECT_ID=\"$gcp_project\"" >> "$CONFIG_FILE"
-            echo "ℹ️  Note: Ensure you have 'gcloud' installed and authenticated."
-            ;;
-        3)
-            platform="Vercel"
-            read -sp "Vercel Token: " vercel_token
-            echo ""
-            echo "VERCEL_TOKEN=\"$vercel_token\"" >> "$CONFIG_FILE"
-            ;;
-        4)
-            platform="Render"
-            read -sp "Render API Key: " render_key
-            echo ""
-            echo "RENDER_API_KEY=\"$render_key\"" >> "$CONFIG_FILE"
-            ;;
-        5)
-            platform="DigitalOcean"
-            read -sp "DO Personal Access Token: " do_token
-            echo ""
-            echo "DIGITALOCEAN_TOKEN=\"$do_token\"" >> "$CONFIG_FILE"
-            ;;
-        *)
-            platform="Generic"
-            ;;
+    echo "🔍 Configuration Setup"
+    echo "------------------------"
+    
+    # Language
+    if [ -f "package.json" ]; then default_lang="Node.js"; 
+    elif [ -f "requirements.txt" ]; then default_lang="Python";
+    elif [ -f "go.mod" ]; then default_lang="Go";
+    elif [ -f "pubspec.yaml" ]; then default_lang="Flutter/Dart";
+    elif [ -f "composer.json" ]; then default_lang="PHP";
+    elif [ -f "index.html" ]; then default_lang="HTML/Web";
+    else default_lang="Unknown"; fi
+    
+    read -p "Project Language [$default_lang]: " input_lang
+    lang="${input_lang:-$default_lang}"
+    echo "PROJECT_LANGUAGE=\"$lang\"" >> "$target_config"
+    
+    # Project Type
+    echo ""
+    echo "Select Project Type:"
+    echo "  1) Web App (Frontend/Fullstack)"
+    echo "  2) API / Backend Service"
+    echo "  3) Mobile App"
+    echo "  4) CLI Tool"
+    echo "  5) Other"
+    read -p "Enter Choice [1]: " type_choice
+    
+    case "${type_choice:-1}" in
+        1) proj_type="Web App" ;;
+        2) proj_type="API/Backend" ;;
+        3) proj_type="Mobile App" ;;
+        4) proj_type="CLI Tool" ;;
+        *) proj_type="Other" ;;
     esac
-
-    echo "✅ Configuration saved to $CONFIG_FILE"
-    echo "DEPLOYMENT_PLATFORM=\"$platform\"" >> "$CONFIG_FILE"
-
-    # 4. Generate Deployment Plan
-    echo "🧠 Generating deployment plan for $platform ($stack)..."
+    echo "PROJECT_TYPE=\"$proj_type\"" >> "$target_config"
     
-    context=$(scan_codebase)
-    prompt="You are a DevOps expert. The user has a $stack project and wants to deploy to $platform.\n\nProject Context:\n$context\n\nGenerate a detailed 'DEPLOYMENT_PLAN.md' that includes:\n1. Prerequisites\n2. Required configuration files (Dockerfile, yaml, etc.) with code snippets.\n3. Step-by-step generic deployment commands.\n4. How to use the keys stored in .env.\n\nOutput ONLY valid Markdown."
-    
-    call_gemini "$prompt" "DEPLOYMENT_PLAN.md"
+    echo ""
+    echo "✅ Setup Complete!"
+    echo "   Configuration saved to $target_config"
+    echo "   Run './aid deploy' when you are ready to configure deployment."
 }
 
 # 2. Agentic Workflows
@@ -306,8 +275,13 @@ cmd_analyze() {
         user_rules="\n\nUSER CONFIG / RULES:\n$(cat .aid/rules.md)\n"
     fi
     
+    # Load previously saved project info if available
+    proj_lang="${PROJECT_LANGUAGE:-Auto-Detect}"
+    proj_type="${PROJECT_TYPE:-Auto-Detect}"
+    
     # 4. Build Prompt
     prompt="You are a Principal DevOps Engineer and Software Architect. I need a DEEP DIVE 'Agentic Deployment Integration' report for this workspace.\n\n"
+    prompt="${prompt}Project Config: Language='$proj_lang', Type='$proj_type'\n"
     prompt="${prompt}Infrastructure Context:${infra_context}\n\n"
     prompt="${prompt}Codebase Context:\n${code_context}\n${user_rules}\n"
     prompt="${prompt}Please provide a comprehensive report DETAILED for this specific project type:\n"
@@ -398,54 +372,97 @@ cmd_deploy() {
     echo "🕵️  Agentic Deployment Initiated..."
     echo "---------------------------------"
     
-    # 1. Run Analysis First
-    echo "📊 Running pre-deployment analysis..."
-    cmd_analyze > /dev/null 2>&1
+    # 1. Check/Set Deployment Platform
+    if [ -z "$DEPLOYMENT_PLATFORM" ]; then
+        echo "🚀 Choose your deployment target:"
+        echo "1. AWS"
+        echo "2. GCP (Google Cloud)"
+        echo "3. Vercel"
+        echo "4. Render"
+        echo "5. DigitalOcean"
+        echo "6. Other (Generic)"
+        read -p "Select (1-6): " platform_choice
+
+        case "$platform_choice" in
+            1)
+                platform="AWS"
+                read -p "AWS Access Key ID: " aws_key
+                read -sp "AWS Secret Access Key: " aws_secret
+                echo ""
+                if [ -f "$CONFIG_FILE" ]; then
+                    echo "AWS_ACCESS_KEY_ID=\"$aws_key\"" >> "$CONFIG_FILE"
+                    echo "AWS_SECRET_ACCESS_KEY=\"$aws_secret\"" >> "$CONFIG_FILE"
+                fi
+                ;;
+            2)
+                platform="GCP"
+                read -p "GCP Project ID: " gcp_project
+                if [ -f "$CONFIG_FILE" ]; then
+                     echo "GCP_PROJECT_ID=\"$gcp_project\"" >> "$CONFIG_FILE"
+                fi
+                echo "ℹ️  Note: Ensure you have 'gcloud' installed and authenticated."
+                ;;
+            3)
+                platform="Vercel"
+                read -sp "Vercel Token: " vercel_token
+                echo ""
+                if [ -f "$CONFIG_FILE" ]; then
+                    echo "VERCEL_TOKEN=\"$vercel_token\"" >> "$CONFIG_FILE"
+                fi
+                ;;
+            4)
+                platform="Render"
+                read -sp "Render API Key: " render_key
+                echo ""
+                if [ -f "$CONFIG_FILE" ]; then
+                    echo "RENDER_API_KEY=\"$render_key\"" >> "$CONFIG_FILE"
+                fi
+                ;;
+            5)
+                platform="DigitalOcean"
+                read -sp "DO Personal Access Token: " do_token
+                echo ""
+                if [ -f "$CONFIG_FILE" ]; then
+                    echo "DIGITALOCEAN_TOKEN=\"$do_token\"" >> "$CONFIG_FILE"
+                fi
+                ;;
+            *)
+                platform="Generic"
+                ;;
+        esac
+        
+        echo "DEPLOYMENT_PLATFORM=\"$platform\"" >> "$CONFIG_FILE"
+        export DEPLOYMENT_PLATFORM="$platform"
+        echo "✅ Platform configured: $platform"
+    else
+        echo "✅ Platform already configured: $DEPLOYMENT_PLATFORM"
+        platform="$DEPLOYMENT_PLATFORM"
+    fi
+
+    # 4. Generate Deployment Plan (if not exists or forced)
+    # 4. Generate Deployment Plan (if not exists or forced)
+    echo "🧠 Generating deployment plan for $platform..."
     
-    # 2. Extract Key Info from Report (Simple grep for now, or just show the report path)
-    echo "✅ Analysis Complete. Report saved to AGENTIC_REPORT.md"
-    echo ""
-    echo "📋 Deployment Strategy Recommendation:"
-    # extract specific lines if possible, or just rely on the user reading the report
+    stack="${PROJECT_LANGUAGE:-Auto-Detect}"
+    context=$(scan_codebase)
+    prompt="You are a DevOps expert. The user has a $stack project and wants to deploy to $platform.\n\nProject Context:\n$context\n\nGenerate a detailed 'DEPLOYMENT_PLAN.md' that includes:\n1. Prerequisites\n2. Required configuration files (Dockerfile, yaml, etc.) with code snippets.\n3. Step-by-step generic deployment commands.\n4. How to use the keys stored in .env.\n\nOutput ONLY valid Markdown."
     
-    stack="Unknown"
-    if [ -f "Dockerfile" ]; then stack="Docker Container"; 
-    elif [ -f "package.json" ]; then stack="Node.js App";
-    elif [ -f "requirements.txt" ]; then stack="Python App"; fi
-    
-    echo "   Detected Stack: $stack"
-    echo "   Recommended Action: Review AGENTIC_REPORT.md for specific architecture advice."
-    echo ""
-    
+    call_gemini "$prompt" "aid_reports/DEPLOYMENT_PLAN.md"
+    cp "aid_reports/DEPLOYMENT_PLAN.md" "DEPLOYMENT_PLAN.md"
+
     read -p "adding Agentic Deployment Integration... " confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         echo "❌ Deployment cancelled."
         exit 0
     fi
-
-    echo ""
-    echo "🚀 Proceeding with Deployment Configuration..."
     
-    # Now call the original init logic for platform selection if not set
-    # Or just proceed with the deployment trigger if config exists
-    
-    # Check if platform is configured
-    if grep -q "DEPLOYMENT_PLATFORM=" "$CONFIG_FILE"; then
-        platform=$(grep "DEPLOYMENT_PLATFORM=" "$CONFIG_FILE" | cut -d'=' -f2)
-        echo "ℹ️  Deploying to configured platform: $platform"
-        
-        # Actual deployment logic (placeholder expansion)
-        case "$platform" in
-            AWS) echo "🚀 Executing AWS deployment scripts..." ;;
-            GCP) echo "🚀 Executing gcloud run deploy..." ;;
-            Vercel) echo "🚀 Executing vercel --prod..." ;;
-            *) echo "🚀 Executing generic deployment script..." ;;
-        esac
-    else
-        echo "⚠️  No deployment platform configured."
-        echo "   Redirecting to 'init' to setup deployment target..."
-        cmd_init
-    fi
+    echo "🚀 Executing deployment basics..."
+    case "$platform" in
+        AWS) echo "aws s3 sync . s3://bucket --dryrun" ;;
+        GCP) echo "gcloud run deploy --source ." ;;
+        Vercel) echo "vercel --prod" ;;
+        *) echo "Generic deployment script" ;;
+    esac
     log_history "deploy"
 }
 
