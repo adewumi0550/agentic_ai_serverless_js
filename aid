@@ -749,7 +749,14 @@ cmd_help() {
     echo "  start       Start local server (auto-detects project type)"
     echo "  deploy      Deploy project (runs deploy.sh, sls deploy, etc.)"
     echo "  push        Smart Git Push (Auto-stage, AI Commit Message, Push)"
+    echo "  clean       Clear the terminal screen"
     echo ""
+}
+
+cmd_clean() {
+    clear
+    echo -e "${GREEN}✨ Screen cleaned!${NC}"
+    cmd_help
 }
 
 # --- Main Dispatch ---
@@ -769,6 +776,8 @@ case "$1" in
     report)     cmd_report ;;
     start)      cmd_start ;;
     deploy)     cmd_deploy ;;
+    deploy)     cmd_deploy ;;
     push)       cmd_push ;;
+    clean)      cmd_clean ;;
     *)          cmd_help ;;
 esac
