@@ -7,8 +7,8 @@
 set -e
 
 CONFIG_FILE=".env"
-GEMINI_MODEL="gemini-2.5-pro"
-AID_VERSION="1.0.3"
+GEMINI_MODEL="gemini-1.5-pro"
+AID_VERSION="1.0.4"
 
 # Colors
 RED='\033[0;31m'
@@ -66,7 +66,7 @@ cmd_config() {
     # Handle 'clean' command first
     if [ "$1" == "clean" ]; then
         echo "🧹 Cleaning local configuration..."
-        if [ -f ".aid/config" ]; then rm ".aid/config"; echo "   Deleted .aid/config"; fi
+        if [ -f ".aid_data/config" ]; then rm ".aid_data/config"; echo "   Deleted .aid_data/config"; fi
         if [ -f ".env" ]; then rm ".env"; echo "   Deleted .env"; fi
         echo "✅ Local configuration cleaned. Now using global defaults (if any)."
         return
@@ -78,16 +78,16 @@ cmd_config() {
         # Remove --global from args
         set -- "${@//--global/}"
         target_config="$GLOBAL_CONFIG_FILE"
-        mkdir -p "$HOME/.aid"
+        mkdir -p "$HOME/.aid_data"
     else
         is_global=0
         load_config # Sets CONFIG_FILE to local or global
         target_config="$CONFIG_FILE"
-        # If no local config exists and we are writing, default to creating local .aid/config
+        # If no local config exists and we are writing, default to creating local .aid_data/config
         if [ -z "$target_config" ] || [ "$target_config" == "$GLOBAL_CONFIG_FILE" ]; then
              if [ -n "$2" ]; then # We are writing
-                 target_config=".aid/config"
-                 mkdir -p ".aid"
+                 target_config=".aid_data/config"
+                 mkdir -p ".aid_data"
              fi
         fi
     fi
@@ -150,8 +150,8 @@ ensure_gitignore() {
         "build/"
         ".env"
         ".DS_Store"
-        ".aid/"
-        "aid_reports/"
+        ".aid_data/"
+        "aid_out/"
         "yarn-cache/"
         "coverage/"
         "*.log"
@@ -175,8 +175,8 @@ cmd_init() {
     
     # 1. Setup Gemini Key
     # 1. Setup Gemini Key
-    target_config=".aid/config"
-    mkdir -p ".aid"
+    target_config=".aid_data/config"
+    mkdir -p ".aid_data"
     
     # Secure: Add to .gitignore if not present
     ensure_gitignore
@@ -190,48 +190,40 @@ cmd_init() {
         source_config "$target_config"
     fi
 
-    if [ -z "$GEMINI_API_KEY" ]; then
-        while true; do
-            read -sp "Enter your Gemini API Key: " api_key
-            echo ""
-            
-            if [ -z "$api_key" ]; then
-                echo "❌ API Key cannot be empty."
-                continue
-            fi
+    # Detect existing gemini CLI auth
+    has_gemini_cli_auth=0
+    if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+        has_gemini_cli_auth=1
+    fi
 
-            echo "Testing API Key..."
-            response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models?key=$api_key")
-
-            if [ "$response" -eq 200 ]; then
-                echo "✅ API Key is valid!"
-                break
-            else
-                echo "❌ Invalid API Key (HTTP $response). Please try again."
-            fi
-        done
-        
-        echo "Where do you want to save this key?"
-        echo "  (l) Local Secure (.aid/config) - Recommended"
-        echo "  (g) Global (~/.aid/config) - Developer defaults"
-        read -p "Select [l/g]: " save_loc
-        
-        if [[ "$save_loc" == "g" ]]; then
-            mkdir -p "$GLOBAL_CONFIG_DIR"
-            target_config="$GLOBAL_CONFIG_FILE"
-            echo "Saving to global config: $target_config"
-        else
-            target_config=".aid/config"
-            echo "Saving to local secure config: $target_config"
-        fi
-
-        echo "GEMINI_API_KEY=\"$api_key\"" >> "$target_config"
-        echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$target_config"
-        export GEMINI_API_KEY="$api_key"
-        
+    if [ -z "$GEMINI_API_KEY" ] && [ "$has_gemini_cli_auth" -eq 1 ]; then
+        echo -e "${GREEN}✅ Authenticated via 'gemini' CLI.${NC}"
+    elif [ -z "$GEMINI_API_KEY" ]; then
+        echo -e "${YELLOW}⚠️  No active session found.${NC}"
+        echo "   Please login to the 'gemini' CLI or provide an API Key."
         echo ""
+        read -p "Do you want to setup an API Key now? [y/N]: " setup_key
+        if [[ "$setup_key" =~ ^[Yy]$ ]]; then
+            while true; do
+                read -sp "Enter your Gemini API Key: " api_key
+                echo ""
+                if [ -z "$api_key" ]; then echo "❌ API Key cannot be empty."; continue; fi
+                echo "Testing API Key..."
+                response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models?key=$api_key")
+                if [ "$response" -eq 200 ]; then echo "✅ API Key is valid!"; break;
+                else echo "❌ Invalid API Key (HTTP $response). Please try again."; fi
+            done
+            echo "Where do you want to save this key?"
+            echo "  (l) Local Secure (.aid/config) - Recommended"
+            echo "  (g) Global (~/.aid/config) - Developer defaults"
+            read -p "Select [l/g]: " save_loc
+            if [[ "$save_loc" == "g" ]]; then target_config="$GLOBAL_CONFIG_FILE"; else target_config=".aid_data/config"; fi
+            echo "GEMINI_API_KEY=\"$api_key\"" >> "$target_config"
+            echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$target_config"
+            export GEMINI_API_KEY="$api_key"
+        fi
     else
-        echo "✅ Gemini API Key found."
+        echo -e "${GREEN}✅ Gemini API Key found.${NC}"
     fi
 
     # 2. Detect Stack (Interactive or Auto)
@@ -335,14 +327,14 @@ cmd_analyze() {
     code_context=$(scan_codebase)
     
     # Save context for user reference
-    mkdir -p "aid_reports"
-    echo "$code_context" > "aid_reports/project_context.txt"
-    echo "📄 Project context saved to aid_reports/project_context.txt"
+    mkdir -p "aid_out"
+    echo "$code_context" > "aid_out/project_context.txt"
+    echo "📄 Project context saved to aid_out/project_context.txt"
     
     # 3. User Rules
     user_rules=""
-    if [ -f ".aid/rules.md" ]; then
-        user_rules="\n\nUSER CONFIG / RULES:\n$(cat .aid/rules.md)\n"
+    if [ -f ".aid_data/rules.md" ]; then
+        user_rules="\n\nUSER CONFIG / RULES:\n$(cat .aid_data/rules.md)\n"
     fi
     
     # Load previously saved project info if available
@@ -350,22 +342,21 @@ cmd_analyze() {
     proj_type="${PROJECT_TYPE:-Auto-Detect}"
     
     # 4. Build Prompt
-    prompt="You are a Principal DevOps Engineer. Analyze this codebase and provide a strategic summary.\n\n"
+    prompt="You are a Principal DevOps Engineer. Provide a brief, strategic summary of this codebase.\n\n"
     prompt="${prompt}Project Config: Language='$proj_lang', Type='$proj_type'\n"
     prompt="${prompt}Infrastructure Context:${infra_context}\n\n"
     prompt="${prompt}Codebase Context:\n${code_context}\n${user_rules}\n"
-    prompt="${prompt}Please provide a report with EXACTLY the following sections:\n"
-    prompt="${prompt}1. **Product Title**: Name of the project.\n"
-    prompt="${prompt}2. **Description**: ~20 lines describing the application's purpose and architecture.\n"
-    prompt="${prompt}3. **Recommended Deployment Platform**:\n"
-    prompt="${prompt}   - **Services**: Recommended compute (e.g., EC2, Cloud Run, Cloud Functions).\n"
-    prompt="${prompt}   - **CDN**: Recommended CDN strategy.\n"
-    prompt="${prompt}   - **Deployment Platform**: Specific platform recommendation (e.g., Vercel, Google Cloud).\n\n"
-    prompt="${prompt}Keep the report high-level and strategic. Do NOT provide full implementation details or code steps."
+    prompt="${prompt}Output EXACTLY these 5 lines, with at most ONE sentence per line:\n"
+    prompt="${prompt}Project name: [Name]\n"
+    prompt="${prompt}Programming script: [Language/Framework]\n"
+    prompt="${prompt}DB or related: [Database details]\n"
+    prompt="${prompt}Month estimate cost: [Projected cost in USD]\n"
+    prompt="${prompt}service recommened: [Specific GCP/Platform service]\n\n"
+    prompt="${prompt}Do NOT provide extra text, tables, or implementation details."
 
     echo "🧠 Generating Agentic Report..."
-    call_gemini "$prompt" "aid_reports/deployment_plan.md"
-    cp "aid_reports/deployment_plan.md" "AGENTIC_REPORT.md" # Keep legacy link for now
+    call_gemini "$prompt" "aid_out/deployment_plan.md"
+    cp "aid_out/deployment_plan.md" "AGENTIC_REPORT.md" # Keep legacy link for now
     log_history "analyze"
 }
 
@@ -406,13 +397,52 @@ cmd_generate() {
     log_history "gen"
 }
 
+cmd_recommend() {
+    check_config
+    echo "💡 Generating strategic recommendations..."
+    context=$(scan_codebase)
+    prompt="You are a Principal Architect. Provide 5-10 high-impact recommendations for this codebase. \n\nContext: $context\n\nOutput ONLY a bulleted list where each point is EXACTLY one sentence long."
+    call_gemini "$prompt" "RECOMMENDATION.md"
+    log_history "recommend"
+}
+
+cmd_plan() {
+    check_config
+    echo -e "${BLUE}📋 Creating Master Application Plan...${NC}"
+    
+    echo -e "\n1. ${CYAN}Generating App Report (AGENTIC_REPORT.md)...${NC}"
+    cmd_analyze
+    
+    echo -e "2. ${CYAN}Generating App Recommendations (RECOMMENDATION.md)...${NC}"
+    cmd_recommend
+    
+    echo -e "3. ${CYAN}Generating Deployment Strategy (DEPLOYMENT_PLAN.md)...${NC}"
+    DEPLOY_PLAN_ONLY=1 cmd_deploy
+    
+    echo ""
+    echo -e "${GREEN}✅ Plan Complete! Generated 3 documents:${NC}"
+    echo "   - AGENTIC_REPORT.md (Architecture)"
+    echo "   - RECOMMENDATION.md (Optimizations)"
+    echo "   - DEPLOYMENT_PLAN.md (Ops Strategy)"
+}
+
 cmd_history() {
-    if [ -f ".aid/history.log" ]; then
+    if [ -f ".aid_data/history.log" ]; then
         echo "📜 Developer History:"
-        cat ".aid/history.log"
+        cat ".aid_data/history.log"
     else
         echo "No history yet."
     fi
+}
+
+cmd_gemini() {
+    if ! command -v gemini &> /dev/null; then
+        echo -e "${RED}❌ 'gemini' CLI tool not found.${NC}"
+        echo "   Please install it or ensure it is in your PATH."
+        exit 1
+    fi
+    echo -e "${CYAN}🤖 Proxying to 'gemini' CLI...${NC}"
+    gemini "$@"
 }
 
 # 3. Core & Serverless
@@ -457,10 +487,32 @@ cmd_deploy() {
                 ;;
             2)
                 platform="GCP"
-                read -p "GCP Project ID: " gcp_project
+                # Use cached PROJECT_ID if available
+                default_project="${GCP_PROJECT_ID:-campuscook-8e47c}"
+                read -p "GCP Project ID [$default_project]: " gcp_project
+                gcp_project="${gcp_project:-$default_project}"
+                
+                default_service="${GCP_SERVICE_NAME:-lexiguide}"
+                read -p "Cloud Run Service Name [$default_service]: " gcp_service
+                gcp_service="${gcp_service:-$default_service}"
+                
+                default_region="${GCP_REGION:-us-central1}"
+                read -p "GCP Region [$default_region]: " gcp_region
+                gcp_region="${gcp_region:-$default_region}"
+
                 if [ -f "$CONFIG_FILE" ]; then
+                     # Clean old values
+                     sed -i '' "/^GCP_PROJECT_ID=/d" "$CONFIG_FILE"
+                     sed -i '' "/^GCP_SERVICE_NAME=/d" "$CONFIG_FILE"
+                     sed -i '' "/^GCP_REGION=/d" "$CONFIG_FILE"
+                     
                      echo "GCP_PROJECT_ID=\"$gcp_project\"" >> "$CONFIG_FILE"
+                     echo "GCP_SERVICE_NAME=\"$gcp_service\"" >> "$CONFIG_FILE"
+                     echo "GCP_REGION=\"$gcp_region\"" >> "$CONFIG_FILE"
                 fi
+                export GCP_PROJECT_ID="$gcp_project"
+                export GCP_SERVICE_NAME="$gcp_service"
+                export GCP_REGION="$gcp_region"
                 echo "ℹ️  Note: Ensure you have 'gcloud' installed and authenticated."
                 ;;
             3)
@@ -500,7 +552,18 @@ cmd_deploy() {
         platform="$DEPLOYMENT_PLATFORM"
     fi
 
-    # 4. Generate Deployment Plan (if not exists or forced)
+    # Check if we only want the plan
+    if [ -n "$DEPLOY_PLAN_ONLY" ]; then
+        echo -e "${CYAN}🧠 Generating deployment plan for $platform...${NC}"
+        stack="${PROJECT_LANGUAGE:-Auto-Detect}"
+        ptype="${PROJECT_TYPE:-Auto-Detect}"
+        context=$(scan_codebase)
+        prompt="You are a Principal DevOps Engineer. The user wants to deploy to **$platform**. \n\nContext: $context\n\nGenerate **DEPLOYMENT_PLAN.md** with: \n1. Architecture (1 sentence)\n2. Config (Essential Dockerfile/YAML ONLY)\n3. Deployment Steps (Shell commands ONLY).\nKeep it extremely concise."
+        call_gemini "$prompt" "aid_out/DEPLOYMENT_PLAN.md"
+        cp "aid_out/DEPLOYMENT_PLAN.md" "DEPLOYMENT_PLAN.md"
+        echo -e "${GREEN}✅ Plan Generated: DEPLOYMENT_PLAN.md${NC}"
+        return
+    fi
     echo -e "${CYAN}🧠 Generating deployment plan for $platform...${NC}"
     
     stack="${PROJECT_LANGUAGE:-Auto-Detect}"
@@ -522,8 +585,8 @@ cmd_deploy() {
     prompt="${prompt}- How to check logs and health.\n\n"
     prompt="${prompt}Output ONLY valid Markdown. Use specific icons and headers to make it look professional."
     
-    call_gemini "$prompt" "aid_reports/DEPLOYMENT_PLAN.md"
-    cp "aid_reports/DEPLOYMENT_PLAN.md" "DEPLOYMENT_PLAN.md"
+    call_gemini "$prompt" "aid_out/DEPLOYMENT_PLAN.md"
+    cp "aid_out/DEPLOYMENT_PLAN.md" "DEPLOYMENT_PLAN.md"
 
     echo -e "${GREEN}✅ Plan Generated: DEPLOYMENT_PLAN.md${NC}"
     read -p "View plan now? [Y/n] " view_plan
@@ -541,7 +604,22 @@ cmd_deploy() {
     echo -e "${BLUE}🚀 Executing deployment basics...${NC}"
     case "$platform" in
         AWS) echo "aws s3 sync . s3://bucket --dryrun" ;;
-        GCP) echo "gcloud run deploy --source ." ;;
+        GCP)
+            project="${GCP_PROJECT_ID:-campuscook-8e47c}"
+            service="${GCP_SERVICE_NAME:-lexiguide}"
+            region="${GCP_REGION:-us-central1}"
+            
+            echo -e "${CYAN}📦 Building and pushing container image for $service to $project...${NC}"
+            gcloud builds submit --tag gcr.io/"$project"/"$service" --project "$project"
+            
+            echo -e "${CYAN}🌍 Deploying to Cloud Run in $region...${NC}"
+            gcloud run deploy "$service" \
+              --image gcr.io/"$project"/"$service" \
+              --platform managed \
+              --region "$region" \
+              --allow-unauthenticated \
+              --project "$project"
+            ;;
         Vercel) echo "vercel --prod" ;;
         *) echo "Generic deployment script" ;;
     esac
@@ -555,7 +633,7 @@ cmd_push() {
     ensure_gitignore
     
     # Safety: Remove cached ignored files if they were accidentally added
-    IGNORED_ITEMS=("node_modules" "dist" "build" ".env" ".DS_Store" ".aid" "aid_reports" "yarn-cache" "coverage")
+    IGNORED_ITEMS=("node_modules" "dist" "build" ".env" ".DS_Store" ".aid_data" "aid_out" "yarn-cache" "coverage")
     for item in "${IGNORED_ITEMS[@]}"; do
         if git ls-files --error-unmatch "$item" >/dev/null 2>&1; then
              echo -e "${YELLOW}🧹 Removing $item from git index...${NC}"
@@ -646,8 +724,8 @@ cmd_push() {
 log_history() {
     local cmd="$1"
     local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
-    mkdir -p ".aid"
-    echo "[$timestamp] $cmd" >> ".aid/history.log"
+    mkdir -p ".aid_data" 2>/dev/null || true
+    echo "[$timestamp] $cmd" >> ".aid_data/history.log" 2>/dev/null || true
 }
 
 source_config() {
@@ -685,10 +763,10 @@ load_config() {
     # Load Global first
     source_config "$GLOBAL_CONFIG_FILE"
     
-    # Load Local Secure (.aid/config) - PRIMARY
-    if [ -f ".aid/config" ]; then
-        source_config ".aid/config"
-        CONFIG_FILE=".aid/config" # Update current active config
+    # Load Local Secure (.aid_data/config) - PRIMARY
+    if [ -f ".aid_data/config" ]; then
+        source_config ".aid_data/config"
+        CONFIG_FILE=".aid_data/config" # Update current active config
     # Backwards compatibility / Override
     elif [ -f ".env" ]; then
         source_config ".env"
@@ -698,20 +776,23 @@ load_config() {
 
 check_config() {
     config_found=0
-    if [ -f ".aid/config" ]; then config_found=1; fi
+    if [ -f ".aid_data/config" ]; then config_found=1; fi
     if [ -f ".env" ]; then config_found=1; fi
     if [ -f "$HOME/.aid/config" ]; then config_found=1; fi
 
-    if [ "$config_found" -eq 0 ]; then
-        echo -e "${RED}❌ No configuration found.${NC}" 
+    # Allow proceeding if no config file but CLI auth exists
+    if [ "$config_found" -eq 0 ] && [ ! -f "$HOME/.gemini/oauth_creds.json" ]; then
+        echo -e "${RED}❌ No configuration or session found.${NC}" 
         echo "   Run './aid init' to setup your project."
         exit 1
     fi
     
     load_config
     
-    if [ -z "$GEMINI_API_KEY" ]; then
-        echo -e "${RED}❌ GEMINI_API_KEY missing.${NC}"
+    # Check for CLI auth if API key is missing
+    if [ -z "$GEMINI_API_KEY" ] && [ ! -f "$HOME/.gemini/oauth_creds.json" ]; then
+        echo -e "${RED}❌ No authentication found (API Key or 'gemini' CLI session).${NC}"
+        echo "   Run './aid init' to setup your project."
         exit 1
     fi
     # Use config model or default
@@ -732,6 +813,32 @@ scan_codebase() {
 call_gemini() {
     local prompt="$1"
     local output_file="$2"
+
+    # Strategy: Use 'gemini' CLI if available
+    if command -v gemini &> /dev/null && [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+        # Selection: use GEMINI_MODEL if set, otherwise default to a reliable one
+        local model_to_use="gemini-1.5-pro"
+        if [ -n "$GEMINI_MODEL" ]; then model_to_use="$GEMINI_MODEL"; fi
+        
+        # Log attempt
+        # echo "   (Attempting AI via 'gemini' CLI using $model_to_use...)"
+        
+        if echo "$prompt" | gemini -m "$model_to_use" > "$output_file" 2>.gemini_err; then
+            echo "✅ Output saved via 'gemini' CLI to $output_file"
+            rm -f .gemini_err
+            return
+        else
+            echo -e "${YELLOW}⚠️  'gemini' CLI failed ($model_to_use). Fallback in progress...${NC}"
+            # cat .gemini_err # Show error if it's not a common ones
+            rm -f .gemini_err
+        fi
+    fi
+
+    # Fallback: Original curl method
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo -e "${RED}❌ No API Key for fallback mode.${NC}"
+        exit 1
+    fi
     
     # Escape prompt for JSON
     json_payload=$(python3 -c "import json, sys; print(json.dumps({'contents': [{'parts': [{'text': sys.argv[1]}]}]}))" "$prompt")
@@ -779,21 +886,23 @@ cmd_help() {
     echo "usage: ./aid <command> [args]"
     echo ""
     echo "Core:"
-    echo "  init        Setup API Key"
+    echo "  init        Setup API Key / CLI Authentication"
     echo "  config      View or update configuration (e.g., ./aid config GEMINI_MODEL gemini-1.5-pro)"
     echo "  version     Show version info"
-    echo "  update      Update aid to the latest version"
     echo "  update      Update aid to the latest version"
     echo "  history     View command history"
     echo "  clean       Clear the terminal screen"
     echo "  help        Show this list"
     echo ""
     echo "Agentic AI:"
+    echo "  plan        Generate Master Plan (Report, Recommendation, Deployment)"
     echo "  ask         Ask a question about your codebase"
     echo "  analyse     Analyze architecture & quality"
     echo "  review      Perform a comprehensive code review"
+    echo "  recommend   Generate strategic recommendations"
     echo "  refactor    Refactor a specific file (./aid refactor file.js \"instructions\")"
     echo "  gen         Generate code from a prompt"
+    echo "  gemini      Directly use the system 'gemini' CLI tool"
     echo "  docs        Generate project documentation (PROJECT_DOCS.md)"
     echo "  report      View last analysis report"
     echo ""
@@ -823,7 +932,10 @@ case "$1" in
     refactor)   cmd_refactor "$2" "$3" ;;
     docs)       cmd_docs ;;
     analyse|analyze) cmd_analyze ;; # From previous scan logic (can alias to review or keep separate)
+    recommend)  cmd_recommend ;;
+    plan)       cmd_plan ;;
     generate|gen)    cmd_generate "$2" ;;
+    gemini)     shift; cmd_gemini "$@" ;;
     report)     cmd_report ;;
     start)      cmd_start ;;
     deploy)     cmd_deploy ;;

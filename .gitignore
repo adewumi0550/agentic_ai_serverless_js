@@ -3,3 +3,11 @@ dist
 .DS_Store
 .env
 .npm
+node_modules/
+dist/
+build/
+.aid/
+aid_reports/
+yarn-cache/
+coverage/
+*.log
