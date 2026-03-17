@@ -11,3 +11,5 @@ aid_reports/
 yarn-cache/
 coverage/
 *.log
+.aid_data/
+aid_out/

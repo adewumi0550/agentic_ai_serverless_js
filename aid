@@ -189,10 +189,23 @@ cmd_init() {
     if [ -f "$target_config" ]; then
         source_config "$target_config"
     fi
+    # 1. Ensure gemini CLI is installed
+    if ! command -v gemini &> /dev/null; then
+        echo -e "${YELLOW}ℹ️  'gemini' CLI not found.${NC}"
+        read -p "Would you like to install it now via npm? [Y/n]: " run_install
+        if [[ "${run_install:-y}" =~ ^[Yy]$ ]]; then
+            echo "📦 Installing @google/gemini-cli globally..."
+            if npm install -g @google/gemini-cli; then
+                echo -e "${GREEN}✅ Installation successful!${NC}"
+            else
+                echo -e "${RED}❌ Installation failed. Please install manually: npm install -g @google/gemini-cli${NC}"
+            fi
+        fi
+    fi
 
-    # Detect existing gemini CLI auth
+    # 2. Detect existing gemini CLI auth
     has_gemini_cli_auth=0
-    if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+    if command -v gemini &> /dev/null && [ -f "$HOME/.gemini/oauth_creds.json" ]; then
         has_gemini_cli_auth=1
     fi
 
@@ -200,27 +213,41 @@ cmd_init() {
         echo -e "${GREEN}✅ Authenticated via 'gemini' CLI.${NC}"
     elif [ -z "$GEMINI_API_KEY" ]; then
         echo -e "${YELLOW}⚠️  No active session found.${NC}"
-        echo "   Please login to the 'gemini' CLI or provide an API Key."
-        echo ""
-        read -p "Do you want to setup an API Key now? [y/N]: " setup_key
-        if [[ "$setup_key" =~ ^[Yy]$ ]]; then
-            while true; do
-                read -sp "Enter your Gemini API Key: " api_key
-                echo ""
-                if [ -z "$api_key" ]; then echo "❌ API Key cannot be empty."; continue; fi
-                echo "Testing API Key..."
-                response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models?key=$api_key")
-                if [ "$response" -eq 200 ]; then echo "✅ API Key is valid!"; break;
-                else echo "❌ Invalid API Key (HTTP $response). Please try again."; fi
-            done
-            echo "Where do you want to save this key?"
-            echo "  (l) Local Secure (.aid/config) - Recommended"
-            echo "  (g) Global (~/.aid/config) - Developer defaults"
-            read -p "Select [l/g]: " save_loc
-            if [[ "$save_loc" == "g" ]]; then target_config="$GLOBAL_CONFIG_FILE"; else target_config=".aid_data/config"; fi
-            echo "GEMINI_API_KEY=\"$api_key\"" >> "$target_config"
-            echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$target_config"
-            export GEMINI_API_KEY="$api_key"
+        if command -v gemini &> /dev/null; then
+            read -p "Would you like to login to the 'gemini' CLI now? [Y/n]: " run_login
+            if [[ "${run_login:-y}" =~ ^[Yy]$ ]]; then
+                echo "🚀 Starting gemini login..."
+                if gemini login; then
+                    echo -e "${GREEN}✅ Login successful!${NC}"
+                    has_gemini_cli_auth=1
+                else
+                    echo -e "${RED}❌ Login failed.${NC}"
+                fi
+            fi
+        fi
+
+        if [ "$has_gemini_cli_auth" -eq 0 ]; then
+            echo ""
+            read -p "No CLI session found. Setup an API Key instead? [y/N]: " setup_key
+            if [[ "$setup_key" =~ ^[Yy]$ ]]; then
+                while true; do
+                    read -sp "Enter your Gemini API Key: " api_key
+                    echo ""
+                    if [ -z "$api_key" ]; then echo "❌ API Key cannot be empty."; continue; fi
+                    echo "Testing API Key..."
+                    response=$(curl -s -o /dev/null -w "%{http_code}" "https://generativelanguage.googleapis.com/v1beta/models?key=$api_key")
+                    if [ "$response" -eq 200 ]; then echo "✅ API Key is valid!"; break;
+                    else echo "❌ Invalid API Key (HTTP $response). Please try again."; fi
+                done
+                echo "Where do you want to save this key?"
+                echo "  (l) Local Secure (.aid_data/config) - Recommended"
+                echo "  (g) Global (~/.aid/config) - Developer defaults"
+                read -p "Select [l/g]: " save_loc
+                if [[ "$save_loc" == "g" ]]; then target_config="$GLOBAL_CONFIG_FILE"; else target_config=".aid_data/config"; fi
+                echo "GEMINI_API_KEY=\"$api_key\"" >> "$target_config"
+                echo "GEMINI_MODEL=\"$GEMINI_MODEL\"" >> "$target_config"
+                export GEMINI_API_KEY="$api_key"
+            fi
         fi
     else
         echo -e "${GREEN}✅ Gemini API Key found.${NC}"
@@ -264,9 +291,13 @@ cmd_init() {
     echo "PROJECT_TYPE=\"$proj_type\"" >> "$target_config"
     
     echo ""
-    echo "✅ Setup Complete!"
+    echo -e "${GREEN}✅ Setup Complete!${NC}"
     echo "   Configuration saved to $target_config"
-    echo "   Run './aid deploy' when you are ready to configure deployment."
+    
+    # 3. Automatic Analysis
+    echo ""
+    echo -e "${BLUE}💡 Initialization finished. Automatically generating your Master Plan...${NC}"
+    cmd_plan
 }
 
 # 2. Agentic Workflows
