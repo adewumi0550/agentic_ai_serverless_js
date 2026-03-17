@@ -19,8 +19,10 @@
 *   **`help`**: Show the command list.
 
 ### Agentic AI
+*   **`plan`**: The ultimate project blueprint. Automatically triggers `analyse`, `recommend`, and `deploy --plan-only` to generate a master folder of strategic docs (`AGENTIC_REPORT.md`, `RECOMMENDATION.md`, `DEPLOYMENT_PLAN.md`).
 *   **`ask "question"`**: Chat with your codebase. Ask about architecture, bugs, or logic.
-*   **`analyse`**: Generates a deep-dive **Agentic Report** (`AGENTIC_REPORT.md`) covering stack analysis, security audit, and scalability.
+*   **`analyse`**: Generates a deep-dive **App Report** (`AGENTIC_REPORT.md`) covering stack analysis, security audit, and scalability.
+*   **`recommend`**: Generates high-impact strategic recommendations for your codebase (`RECOMMENDATION.md`).
 *   **`review`**: Performs a comprehensive code review focusing on security and performance.
 *   **`refactor file.js "instruction"`**: AI-driven code refactoring for specific files.
 *   **`gen "instruction"`**: Generate production-ready code snippets from scratch.
@@ -58,13 +60,17 @@ curl -fsSL https://raw.githubusercontent.com/adewumi0550/agentic_ai_serverless_j
 
 ## ⚡ Usage Guide
 
-### 1. Setup
 Initialize the tool in your project root.
 ```bash
 aid init
 ```
-*   **Global Config**: Saves key to `~/.aid/config` (Recommended for devs).
-*   **Local Config**: Saves key to `.aid/config` (for project-specific overrides).
+**The One-Touch Setup:**
+1.  **Auto-Install**: If you don't have the `gemini` CLI, `aid` will offer to install it for you.
+2.  **Auto-Login**: If you aren't logged in, it will trigger `gemini login` directly.
+3.  **Auto-Analyze**: Once setup is done, it instantly runs `aid plan` to give you your first master report.
+
+*   **Global Config**: Saves settings to `~/.aid_data/config`.
+*   **Local Config**: Saves settings to `.aid_data/config` for project-specific overrides.
 
 ### 2. Daily Workflow
 Instead of `git add . && git commit -m "update" && git push`, just run:
